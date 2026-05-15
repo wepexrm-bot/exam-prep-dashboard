@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { AppData } from '@/models/AppData';
 import { requireAuth } from '@/lib/auth';
-import { DEFAULT_SUBJECTS } from '@/lib/constants';
+import { DEFAULT_NET_SUBJECTS } from '@/lib/constants';
 
 export async function GET(req: NextRequest) {
   const auth = requireAuth(req);
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   if (!doc) {
     doc = await AppData.create({
       username: auth.user,
-      subjects: DEFAULT_SUBJECTS.map((name) => ({ name, pct: 0, completed: false, chapters: [] })),
+      subjects: DEFAULT_NET_SUBJECTS.map((name) => ({ name, pct: 0, completed: false, chapters: [] })),
     });
   }
 
