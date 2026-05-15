@@ -92,20 +92,22 @@ export default function PredictPage() {
       </div>
 
       {!pred.noData && pred.advice.length > 0 && (
-        <Card style={{ borderLeft: `4px solid ${cfg.color}` }}>
-          <CardHeader title={`🎯 Focus recommendation — highest impact ${examType === 'NET' ? 'topics' : 'subjects'}`} />
-          <div className="text-[13px]" style={{ color: 'var(--muted)' }}>
-            Based on {cfg.label} weightages, prioritise these to boost your score:
-            <div className="mt-3 flex flex-col gap-2">
-              {pred.advice.map((a, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-btn" style={{ background: 'var(--surface2)' }}>
-                  <span style={{ color: cfg.color }}>⚡</span>
-                  <span className="font-medium" style={{ color: 'var(--text)' }}>{a}</span>
-                </div>
-              ))}
+        <div className="border-l-4 border-solid" style={{ borderLeftColor: cfg.color }}>
+          <Card>
+            <CardHeader title={`🎯 Focus recommendation — highest impact ${examType === 'NET' ? 'topics' : 'subjects'}`} />
+            <div className="text-[13px]" style={{ color: 'var(--muted)' }}>
+              Based on {cfg.label} weightages, prioritise these to boost your score:
+              <div className="mt-3 flex flex-col gap-2">
+                {pred.advice.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-btn" style={{ background: 'var(--surface2)' }}>
+                    <span style={{ color: cfg.color }}>⚡</span>
+                    <span className="font-medium" style={{ color: 'var(--text)' }}>{a}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       )}
     </>
   );
