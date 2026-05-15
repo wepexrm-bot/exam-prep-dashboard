@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #F6F5F0;
+    --surface: #FFFFFF;
+    --surface2: #EDECE7;
+    --surface3: #E4E2DB;
+    --border: rgba(0,0,0,0.08);
+    --text: #1C1C1A;
+    --muted: #6B6966;
+  }
+
+  .dark {
+    --bg: #111110;
+    --surface: #1C1C1A;
+    --surface2: #242421;
+    --surface3: #2C2C29;
+    --border: rgba(255,255,255,0.08);
+    --text: #F0EFE9;
+    --muted: #8A8680;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card border p-5 shadow-card;
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-btn text-sm font-medium cursor-pointer transition-all duration-150 border;
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--text);
+    color: var(--bg);
+    @apply border-transparent;
+  }
+  .btn-primary:hover { opacity: 0.85; background: var(--text); }
+
+  .btn-green { @apply bg-success text-white border-transparent; }
+  .btn-green:hover { @apply opacity-85; }
+
+  .btn-danger { @apply bg-danger text-white border-transparent; }
+  .btn-danger:hover { @apply opacity-85; }
+
+  .btn-sm { @apply px-2.5 py-1 text-xs; }
+
+  .metric {
+    @apply rounded-card border p-4 shadow-card;
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .form-input {
+    @apply w-full px-3 py-2 rounded-btn text-sm outline-none transition-colors duration-150;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-family: 'DM Sans', sans-serif;
+  }
+  .form-input:focus { border-color: #2563EB; }
+
+  .nav-item {
+    @apply flex items-center gap-2.5 px-2.5 py-1.5 rounded-btn text-[13px] font-medium cursor-pointer transition-all duration-150;
+    color: var(--muted);
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--text); color: var(--bg); }
+
+  .tag {
+    @apply text-[10px] px-2 py-0.5 rounded-full font-semibold;
+  }
+  .tag-CS { @apply bg-primary-light text-primary; }
+  .tag-Math { @apply bg-purple-light text-purple; }
+  .tag-CN { @apply bg-teal-light text-teal; }
+  .tag-Test { @apply bg-amber-light text-amber; }
+  .tag-Revision { @apply bg-danger-light text-danger; }
+  .tag-PYQ { background: #FFF7ED; color: #C2410C; }
+  .tag-Other { background: var(--surface2); color: var(--muted); }
+
+  .progress-bar {
+    @apply h-1.5 rounded-full overflow-hidden;
+    background: var(--surface2);
+  }
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+
+  .meter { @apply w-full h-1.5 rounded-full overflow-hidden mb-2; background: var(--surface2); }
+  .meter-fill { @apply h-full rounded-full transition-all duration-700; }
+
+  .badge { @apply text-[10px] px-2 py-0.5 rounded-full font-bold; background: var(--surface2); color: var(--muted); }
+  .badge-green { @apply bg-success-light text-success; }
+  .badge-amber { @apply bg-amber-light text-amber; }
+  .badge-red { @apply bg-danger-light text-danger; }
+  .badge-blue { @apply bg-primary-light text-primary; }
+}
