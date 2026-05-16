@@ -89,24 +89,31 @@ export default function PYQPage() {
       </div>
 
       {/* SUMMARY METRICS */}
-      <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
-        <div className="metric">
-          <div className="metric-lbl">Total sessions</div>
-          <div className="metric-val">{totalSessions}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-lbl">Chapters complete</div>
-          <div className="metric-val" style={{ color: 'var(--green)' }}>{chaptersComplete}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-lbl">Total solved</div>
-          <div className="metric-val">{totalSolved}<sup>/{totalQs}</sup></div>
-        </div>
-        <div className="metric">
-          <div className="metric-lbl">Overall accuracy</div>
-          <div className="metric-val" style={{ color: accColor(overallAcc) }}>{overallAcc}%</div>
-        </div>
+      <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '10px',
+          marginBottom: '1.5rem'
+  }}>
+    <div className="metric">
+      <div className="metric-lbl">Total sessions</div>
+      <div className="metric-val">{totalSessions}</div>
+    </div>
+    <div className="metric">
+      <div className="metric-lbl">Chapters complete</div>
+      <div className="metric-val" style={{ color: 'var(--green)' }}>{chaptersComplete}</div>
+    </div>
+    <div className="metric">
+      <div className="metric-lbl">Total solved</div>
+      <div className="metric-val">
+        {totalSolved}<sup style={{ fontSize: '14px', fontWeight: 400, color: 'var(--muted)' }}>/{totalQs}</sup>
       </div>
+    </div>
+    <div className="metric">
+      <div className="metric-lbl">Overall accuracy</div>
+      <div className="metric-val" style={{ color: accColor(overallAcc) }}>{overallAcc}%</div>
+    </div>
+  </div>
 
       {/* EMPTY STATE */}
       {pyqData.length === 0 && (
