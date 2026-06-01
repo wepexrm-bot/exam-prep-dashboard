@@ -30,7 +30,7 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
   const pathname = usePathname();
   const router = useRouter();
   const { data } = useApp();
-  const streak = computeStreak(data.dailyScores);
+  const streak = computeStreak(data);
   const cfg = EXAM_CONFIG[examType];
 
   async function handleLogout() {
