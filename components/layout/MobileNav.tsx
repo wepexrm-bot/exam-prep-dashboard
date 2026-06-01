@@ -85,7 +85,7 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
   const router = useRouter();
   const pathname = usePathname();
   const { data } = useApp();
-  const streak = computeStreak(data.dailyScores);
+  const streak = computeStreak(data);
   const cfg = EXAM_CONFIG[examType];
 
   async function handleLogout() {

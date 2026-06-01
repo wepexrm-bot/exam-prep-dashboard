@@ -27,21 +27,53 @@ export function getPct(s: Subject): number {
   return Math.round((s.chapters.filter((c) => c.done).length / s.chapters.length) * 100);
 }
 
-export function computeStreak(dailyScores: DailyScore[]): number {
-  if (!dailyScores.length) return 0;
-  const sorted = [...dailyScores].sort((a, b) => b.date.localeCompare(a.date));
+export function computeStreak(data: AppData): number {
+  // Collect all active dates from every category
+  const activeDates = new Set<string>();
+
+  // Daily scores
+  (data.dailyScores || []).forEach(s => activeDates.add(s.date));
+
+  // Study timer sessions
+  (data.studySessions || []).forEach(s => {
+    if (s.start) activeDates.add(s.start.split('T')[0]);
+  });
+
+  // PYQ sessions
+  (data.pyqData || []).forEach(chap => {
+    (chap.sessions || []).forEach(s => {
+      if (s.date) activeDates.add(s.date);
+    });
+  });
+
+  // Mock tests
+  (data.mockTests || []).forEach(m => {
+    if (m.date) activeDates.add(m.date);
+  });
+
+  // Revisions (lastRevised date)
+  (data.revisions || []).forEach(r => {
+    if (r.lastRevised) activeDates.add(r.lastRevised);
+  });
+
+  if (!activeDates.size) return 0;
+
+  // Count consecutive days ending today or yesterday
   let streak = 0;
   let cur = new Date();
   cur.setHours(0, 0, 0, 0);
   const todayKey = cur.toISOString().split('T')[0];
-  const hasToday = sorted.some((s) => s.date === todayKey);
-  if (!hasToday) cur.setDate(cur.getDate() - 1);
-  for (const s of sorted) {
-    const d = new Date(s.date + 'T00:00:00');
-    const diff = Math.round((cur.getTime() - d.getTime()) / 86400000);
-    if (diff <= 1) { streak++; cur = d; }
-    else break;
+
+  // If no activity today, start from yesterday
+  if (!activeDates.has(todayKey)) cur.setDate(cur.getDate() - 1);
+
+  while (true) {
+    const key = cur.toISOString().split('T')[0];
+    if (!activeDates.has(key)) break;
+    streak++;
+    cur.setDate(cur.getDate() - 1);
   }
+
   return streak;
 }
 
