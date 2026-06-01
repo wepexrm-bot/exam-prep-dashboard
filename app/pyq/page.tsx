@@ -70,58 +70,55 @@ export default function PYQPage() {
   return (
     <>
       {/* PAGE HEADER */}
-      <div className="page-header">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div className="page-title">PYQ Tracker</div>
-          <div className="page-sub">Chapter-wise sessions · progress auto-accumulates across sessions</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>PYQ Tracker</h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 0' }}>
+            Chapter-wise sessions · progress auto-accumulates across sessions
+          </p>
         </div>
         <button className="btn btn-primary" onClick={openModal}>+ Add session</button>
       </div>
 
       {/* INFO BANNER */}
       <div style={{
-        background: 'var(--surface2)', borderRadius: 'var(--radius-sm)',
-        padding: '10px 14px', fontSize: '12px', color: 'var(--muted)',
-        marginBottom: '14px', lineHeight: 1.7
+        background: 'var(--surface2)', borderRadius: 8,
+        padding: '10px 14px', fontSize: 12, color: 'var(--muted)',
+        marginBottom: 14, lineHeight: 1.7
       }}>
         📌 Progress shows <strong>total solved / total questions</strong> across all sessions.
-        Accuracy is weighted across all sessions combined. Set number increments each time you complete all questions.
+        Accuracy is weighted. Set number increments each time you complete all questions.
       </div>
 
       {/* SUMMARY METRICS */}
-      <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '10px',
-          marginBottom: '1.5rem'
-  }}>
-    <div className="metric">
-      <div className="metric-lbl">Total sessions</div>
-      <div className="metric-val">{totalSessions}</div>
-    </div>
-    <div className="metric">
-      <div className="metric-lbl">Chapters complete</div>
-      <div className="metric-val" style={{ color: 'var(--green)' }}>{chaptersComplete}</div>
-    </div>
-    <div className="metric">
-      <div className="metric-lbl">Total solved</div>
-      <div className="metric-val">
-        {totalSolved}<sup style={{ fontSize: '14px', fontWeight: 400, color: 'var(--muted)' }}>/{totalQs}</sup>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 20 }}>
+        <div className="metric">
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--muted)', marginBottom: 6 }}>Total sessions</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)' }}>{totalSessions}</div>
+        </div>
+        <div className="metric">
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--muted)', marginBottom: 6 }}>Chapters complete</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--green)' }}>{chaptersComplete}</div>
+        </div>
+        <div className="metric">
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--muted)', marginBottom: 6 }}>Total solved</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)' }}>
+            {totalSolved}<sup style={{ fontSize: 14, fontWeight: 400, color: 'var(--muted)' }}>/{totalQs}</sup>
+          </div>
+        </div>
+        <div className="metric">
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--muted)', marginBottom: 6 }}>Overall accuracy</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: accColor(overallAcc) }}>{overallAcc}%</div>
+        </div>
       </div>
-    </div>
-    <div className="metric">
-      <div className="metric-lbl">Overall accuracy</div>
-      <div className="metric-val" style={{ color: accColor(overallAcc) }}>{overallAcc}%</div>
-    </div>
-  </div>
 
       {/* EMPTY STATE */}
       {pyqData.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: '2.5rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📂</div>
-          <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: 6 }}>No PYQ sessions yet</div>
-          <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '1.25rem' }}>
-            Start logging chapter-wise PYQ sessions to track your progress
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>No PYQ sessions yet</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: '1.25rem' }}>
+            Start logging chapter-wise PYQ sessions
           </div>
           <button className="btn btn-primary" onClick={openModal}>+ Log your first session</button>
         </div>
@@ -129,7 +126,7 @@ export default function PYQPage() {
 
       {/* SUBJECT GROUPS */}
       {subjects.map((subj) => {
-        const subjChaps = pyqData.filter((p) => p.key?.startsWith(subj.name + '::'));
+        const subjChaps = pyqData.filter((p) => p.key?.startsWith(subj.name + '::') && p.sessions?.length > 0);
         if (!subjChaps.length) return null;
 
         const subjStats = subjChaps.map((c) => getStats(c)).filter(Boolean) as NonNullable<ReturnType<typeof getStats>>[];
@@ -138,33 +135,16 @@ export default function PYQPage() {
         const subjAcc = subjAtt > 0 ? Math.round((subjCor / subjAtt) * 100) : 0;
 
         return (
-          <div key={subj.name} className="section-full" style={{ marginBottom: '1.25rem' }}>
-
+          <div key={subj.name} style={{ marginBottom: 20 }}>
             {/* Subject header */}
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              marginBottom: 6, padding: '0 4px'
-            }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {subj.name}
+              </span>
               <span style={{
-                fontSize: '13px', fontWeight: 600, color: 'var(--muted)',
-                textTransform: 'uppercase', letterSpacing: '0.06em'
-              }}>{subj.name}</span>
-              <span style={{
-                fontSize: '11px', fontWeight: 700, padding: '2px 10px',
-                borderRadius: '99px', background: accBg(subjAcc), color: accColor(subjAcc)
+                fontSize: 11, fontWeight: 700, padding: '2px 10px',
+                borderRadius: 99, background: accBg(subjAcc), color: accColor(subjAcc)
               }}>avg accuracy: {subjAcc}%</span>
-            </div>
-
-            {/* Column headers */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '16px 1fr 200px 100px 100px 32px',
-              gap: 8, padding: '0 12px 6px',
-              fontSize: '10px', color: 'var(--muted)',
-              textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700
-            }}>
-              <span /><span>Chapter</span><span>Progress</span>
-              <span>Accuracy</span><span>Set</span><span />
             </div>
 
             {/* Chapter rows */}
@@ -173,127 +153,93 @@ export default function PYQPage() {
               if (!st) return null;
               const chapName = chap.key.split('::')[1];
               const isOpen = openKey === chap.key;
-              const dotColor = st.isComplete ? 'var(--green)' : st.att > 0 ? 'var(--amber)' : 'var(--muted)';
               const barColor = st.isComplete ? '#16A34A' : st.pct >= 50 ? '#CA8A04' : '#2563EB';
-              const setLabel = st.isComplete ? 'Set 1' : st.att > 0 ? 'In progress' : 'Not started';
-              const setColor = st.isComplete ? 'var(--green)' : st.att > 0 ? 'var(--amber)' : 'var(--muted)';
-              const setBg = st.isComplete ? 'var(--green-light)' : st.att > 0 ? 'var(--amber-light)' : 'var(--surface2)';
+              const dotColor = st.isComplete ? 'var(--green)' : st.att > 0 ? 'var(--amber)' : 'var(--muted)';
+              const setLabel = st.isComplete ? 'Set 1' : 'In progress';
+              const setColor = st.isComplete ? 'var(--green)' : 'var(--amber)';
+              const setBg = st.isComplete ? 'var(--green-light)' : 'var(--amber-light)';
 
               return (
                 <div key={chap.key} style={{ marginBottom: 6 }}>
-
-                  {/* Chapter row */}
+                  {/* Chapter card */}
                   <div
                     className="card"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '16px 1fr 200px 100px 100px 32px',
-                      gap: 8, alignItems: 'center',
-                      padding: '10px 12px', cursor: 'pointer', marginBottom: 0
-                    }}
+                    style={{ padding: '10px 14px', cursor: 'pointer', marginBottom: 0 }}
                     onClick={() => setOpenKey(isOpen ? null : chap.key)}
                   >
-                    <div style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: dotColor, flexShrink: 0
-                    }} />
-                    <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>
-                      {chapName}
-                    </span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <span>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: barColor }}>{st.att}</span>
-                          <span style={{ fontSize: '11px', color: 'var(--muted)' }}> / {chap.total}</span>
-                        </span>
-                        <span style={{ fontSize: '10px', color: 'var(--muted)' }}>
-                          {st.remaining > 0 ? `${st.remaining} left` : '✓ done'}
-                        </span>
+                    {/* Row 1: dot + name + set badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text)', minWidth: 0, wordBreak: 'break-word' }}>
+                        {chapName}
+                      </span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px',
+                        borderRadius: 99, background: setBg, color: setColor, flexShrink: 0
+                      }}>{setLabel}</span>
+                      <span style={{ fontSize: 14, color: 'var(--muted)', flexShrink: 0 }}>📋</span>
+                    </div>
+
+                    {/* Row 2: progress bar */}
+                    <div style={{ marginBottom: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+                        <span style={{ fontWeight: 600, color: barColor }}>{st.att} / {chap.total}</span>
+                        <span style={{ color: 'var(--muted)' }}>{st.remaining > 0 ? `${st.remaining} left` : '✓ done'}</span>
                       </div>
-                      <div style={{ height: 5, background: 'var(--surface2)', borderRadius: '99px', overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${st.pct}%`, height: '100%', background: barColor,
-                          borderRadius: '99px', transition: 'width 0.4s'
-                        }} />
+                      <div style={{ height: 5, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${st.pct}%`, background: barColor, borderRadius: 99, transition: 'width 0.4s' }} />
                       </div>
                     </div>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700, padding: '2px 9px',
-                      borderRadius: '99px', display: 'inline-block',
-                      background: st.att > 0 ? accBg(st.acc) : 'var(--surface2)',
-                      color: st.att > 0 ? accColor(st.acc) : 'var(--muted)'
-                    }}>{st.att > 0 ? `${st.acc}%` : '—'}</span>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700, padding: '2px 9px',
-                      borderRadius: '99px', display: 'inline-block',
-                      background: setBg, color: setColor
-                    }}>{setLabel}</span>
-                    <button
-                      onClick={e => { e.stopPropagation(); setOpenKey(isOpen ? null : chap.key); }}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        fontSize: '14px', color: 'var(--muted)', padding: '2px 4px'
-                      }}
-                      title="View sessions"
-                    >📋</button>
+
+                    {/* Row 3: accuracy */}
+                    {st.att > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, color: 'var(--muted)' }}>Accuracy:</span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: '1px 8px',
+                          borderRadius: 99, background: accBg(st.acc), color: accColor(st.acc)
+                        }}>{st.acc}%</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Session breakdown panel */}
+                  {/* Session breakdown */}
                   {isOpen && (
-                    <div style={{
-                      background: 'var(--surface2)', borderRadius: 'var(--radius-sm)',
-                      padding: '10px 14px', marginTop: 4
-                    }}>
-                      {/* Breakdown header */}
-                      <div style={{
-                        display: 'flex', justifyContent: 'space-between',
-                        flexWrap: 'wrap', gap: 4, marginBottom: 8,
-                        fontSize: '11px', fontWeight: 700, color: 'var(--muted)',
-                        textTransform: 'uppercase', letterSpacing: '0.05em'
-                      }}>
-                        <span>Session breakdown ({chap.sessions.length} session{chap.sessions.length !== 1 ? 's' : ''})</span>
-                        <span style={{ color: 'var(--text)', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>
-                          Total: {st.cor}/{st.att} correct = {st.acc}% overall
+                    <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '10px 14px', marginTop: 4 }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {chap.sessions.length} session{chap.sessions.length !== 1 ? 's' : ''}
                         </span>
-                      </div>
-
-                      {/* Session column headers */}
-                      <div style={{
-                        display: 'grid', gridTemplateColumns: '80px 1fr 1fr 90px 24px',
-                        gap: 8, paddingBottom: 6, borderBottom: '1px solid var(--border)',
-                        fontSize: '10px', color: 'var(--muted)',
-                        textTransform: 'uppercase', letterSpacing: '0.05em'
-                      }}>
-                        <span>Session</span><span>Attempted</span>
-                        <span>Correct</span><span>Accuracy</span><span />
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>
+                          {st.cor}/{st.att} correct = {st.acc}%
+                        </span>
                       </div>
 
                       {chap.sessions.length === 0 && (
-                        <div style={{ fontSize: '12px', color: 'var(--muted)', padding: '8px 0' }}>
-                          No sessions logged
-                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>No sessions logged</div>
                       )}
 
                       {chap.sessions.map((s: PYQSession, i: number) => (
                         <div key={i} style={{
-                          display: 'grid', gridTemplateColumns: '80px 1fr 1fr 90px 24px',
-                          gap: 8, alignItems: 'center', padding: '7px 0', fontSize: '12px',
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 0', flexWrap: 'wrap',
                           borderBottom: i < chap.sessions.length - 1 ? '1px solid var(--border)' : 'none'
                         }}>
-                          <span style={{ fontWeight: 500, color: 'var(--text)' }}>Session {i + 1}</span>
-                          <span style={{ color: 'var(--muted)' }}>{s.attempted} questions</span>
-                          <span style={{ color: 'var(--muted)' }}>{s.correct} correct</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', minWidth: 60 }}>Session {i + 1}</span>
+                          <span style={{ fontSize: 12, color: 'var(--muted)', flex: 1 }}>
+                            {s.attempted} attempted · {s.correct} correct
+                          </span>
                           <span style={{
-                            fontSize: '11px', fontWeight: 700, padding: '2px 8px',
-                            borderRadius: '99px', display: 'inline-block',
-                            background: accBg(s.accuracy), color: accColor(s.accuracy)
+                            fontSize: 11, fontWeight: 700, padding: '1px 8px',
+                            borderRadius: 99, background: accBg(s.accuracy), color: accColor(s.accuracy), flexShrink: 0
                           }}>{s.accuracy}%</span>
                           <button
-                            onClick={() => deletePYQSession(chap.key, i)}
+                            onClick={(e) => { e.stopPropagation(); deletePYQSession(chap.key, i); }}
                             style={{
                               background: 'none', border: 'none', color: 'var(--muted)',
-                              cursor: 'pointer', fontSize: '13px', padding: '2px 4px',
-                              borderRadius: 4, transition: 'all 0.12s'
+                              cursor: 'pointer', fontSize: 13, padding: '2px 4px',
+                              borderRadius: 4, flexShrink: 0
                             }}
                             onMouseEnter={e => {
                               (e.target as HTMLElement).style.background = 'var(--coral-light)';
@@ -322,13 +268,10 @@ export default function PYQPage() {
         );
         if (!orphan.length) return null;
         return (
-          <div className="card section-full">
-            <div className="card-head"><span className="card-title">Other</span></div>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', marginBottom: 8 }}>Other</div>
             {orphan.map((chap) => (
-              <div key={chap.key} style={{
-                fontSize: '13px', padding: '9px 0',
-                borderBottom: '1px solid var(--border)', color: 'var(--text)'
-              }}>
+              <div key={chap.key} style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>
                 {chap.key} — {chap.sessions.length} session(s)
               </div>
             ))}
@@ -338,8 +281,8 @@ export default function PYQPage() {
 
       {/* ADD SESSION MODAL */}
       <Modal open={showModal} onClose={() => setShowModal(false)} title="📂 Log PYQ Session">
-        <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '1rem', lineHeight: 1.6 }}>
-          Adds to existing sessions for the same chapter. Sessions accumulate — set number increases when you complete all questions.
+        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: '1rem', lineHeight: 1.6 }}>
+          Sessions accumulate — set number increases when you complete all questions.
         </p>
         <FormGroup label="Subject">
           <select className="form-input" value={selSubject}
@@ -356,16 +299,15 @@ export default function PYQPage() {
           </select>
         </FormGroup>
         <FormGroup label="Total questions in this chapter">
-          <input className="form-input" type="number"
-            placeholder="e.g. 80 (total across all sessions)"
+          <input className="form-input" type="number" placeholder="e.g. 80"
             value={total} onChange={e => setTotal(e.target.value)} />
         </FormGroup>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <FormGroup label="Attempted this session">
+          <FormGroup label="Attempted">
             <input className="form-input" type="number" placeholder="e.g. 30"
               value={attempted} onChange={e => setAttempted(e.target.value)} />
           </FormGroup>
-          <FormGroup label="Correct this session">
+          <FormGroup label="Correct">
             <input className="form-input" type="number" placeholder="e.g. 20"
               value={correct} onChange={e => setCorrect(e.target.value)} />
           </FormGroup>

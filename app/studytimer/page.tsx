@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { PageHeader, Card, CardHeader, Empty, showToast } from '@/components/ui';
 import { formatSeconds } from '@/lib/utils';
 import { StudySession } from '@/lib/types';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ReferenceLine, Cell, Legend,
+  ReferenceLine, Cell,
 } from 'recharts';
 
 function today() { return new Date().toISOString().split('T')[0]; }
@@ -27,9 +27,8 @@ export default function StudyTimerPage() {
   const totalTodaySec = todaySessions.reduce((a, s) => a + s.durationSec, 0);
   const hoursToday = Math.round(totalTodaySec / 3600 * 10) / 10;
   const weeklyTarget = data.weeklyTarget || 12;
-  const dailyTarget = 6; // hours
+  const dailyTarget = 6;
 
-  // Restore on mount
   useEffect(() => {
     const raw = localStorage.getItem('gate_timer_v2');
     if (!raw) return;
@@ -66,10 +65,7 @@ export default function StudyTimerPage() {
   function saveState(extra: object) {
     localStorage.setItem('gate_timer_v2', JSON.stringify({
       startedAt: startRef.current?.toISOString(),
-      pausedAt,
-      paused,
-      running,
-      ...extra,
+      pausedAt, paused, running, ...extra,
     }));
   }
 
@@ -113,7 +109,7 @@ export default function StudyTimerPage() {
     startRef.current = null;
   }
 
-  // ── Chart data — last 30 days ─────────────────────────────
+  // Chart data
   const sessions = data.studySessions || [];
   const last30: Record<string, number> = {};
   for (let i = 29; i >= 0; i--) {
@@ -123,16 +119,14 @@ export default function StudyTimerPage() {
   }
   sessions.forEach(s => {
     const day = s.start?.split('T')[0];
-    if (day && last30[day] !== undefined) {
-      last30[day] += s.durationSec / 3600;
-    }
+    if (day && last30[day] !== undefined) last30[day] += s.durationSec / 3600;
   });
   const chartData = Object.entries(last30).map(([date, hours]) => ({
-    date: date.slice(5), // MM-DD
+    date: date.slice(5),
     hours: Math.round(hours * 10) / 10,
   }));
 
-  // ── All-time stats ────────────────────────────────────────
+  // All-time stats
   const dayTotals: Record<string, number> = {};
   sessions.forEach(s => {
     const day = s.start?.split('T')[0];
@@ -146,138 +140,159 @@ export default function StudyTimerPage() {
   const targetDays = allDays.filter(h => h >= dailyTarget).length;
   const belowTarget = allDays.filter(h => h < dailyTarget).length;
 
-  // ── Status label ──────────────────────────────────────────
-  const statusText = !running
-    ? 'Session stopped — start a new one anytime'
-    : paused
-    ? '⏸ Session paused'
-    : '● Recording session';
+  const statusText = !running ? 'Session stopped — start a new one anytime'
+    : paused ? '⏸ Session paused' : '● Recording session';
   const statusColor = !running ? 'var(--muted)' : paused ? '#D97706' : '#16A34A';
-
   const fmt = (d: Date) => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
   return (
     <>
-      <PageHeader title="Study Timer" sub={new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} />
+      <PageHeader title="Study Timer" sub={new Date().toLocaleDateString('en-IN', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      })} />
 
       {/* Timer card */}
       <Card className="text-center mb-4">
-        <div className="font-mono text-[64px] md:text-[80px] font-bold leading-none my-4 tracking-[4px]"
-          style={{ color: running && !paused ? '#16A34A' : paused ? '#D97706' : 'var(--text)' }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: 'clamp(40px, 12vw, 80px)',
+          fontWeight: 700, lineHeight: 1,
+          margin: '16px 0', letterSpacing: 4,
+          color: running && !paused ? '#16A34A' : paused ? '#D97706' : 'var(--text)',
+          wordBreak: 'break-all'
+        }}>
           {formatSeconds(elapsed)}
         </div>
-        <div className="text-[13px] mb-6 flex items-center justify-center gap-1.5" style={{ color: statusColor }}>
-          {running && !paused && <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse" />}
+        <div style={{
+          fontSize: 13, marginBottom: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          color: statusColor
+        }}>
+          {running && !paused && (
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A34A', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+          )}
           {statusText}
         </div>
-        <div className="flex gap-3 justify-center flex-wrap">
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           {(!running || paused) && (
-            <button onClick={handleStart}
-              className="flex items-center gap-2 px-8 py-3 rounded-btn font-bold text-[15px] text-white transition-opacity hover:opacity-90"
-              style={{ background: '#16A34A', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-              ▶ {paused ? 'Resume' : 'Start'}
-            </button>
+            <button onClick={handleStart} style={{
+              background: '#16A34A', color: '#fff', border: 'none',
+              padding: '12px 28px', borderRadius: 8, fontWeight: 700,
+              fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
+            }}>▶ {paused ? 'Resume' : 'Start'}</button>
           )}
           {running && !paused && (
-            <button onClick={handlePause}
-              className="flex items-center gap-2 px-8 py-3 rounded-btn font-bold text-[15px] text-white transition-opacity hover:opacity-90"
-              style={{ background: '#D97706', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-              ⏸ Pause
-            </button>
+            <button onClick={handlePause} style={{
+              background: '#D97706', color: '#fff', border: 'none',
+              padding: '12px 28px', borderRadius: 8, fontWeight: 700,
+              fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
+            }}>⏸ Pause</button>
           )}
           {running && (
-            <button onClick={handleStop}
-              className="flex items-center gap-2 px-8 py-3 rounded-btn font-bold text-[15px] text-white transition-opacity hover:opacity-90"
-              style={{ background: '#DB2777', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-              ■ End session
-            </button>
+            <button onClick={handleStop} style={{
+              background: '#DB2777', color: '#fff', border: 'none',
+              padding: '12px 28px', borderRadius: 8, fontWeight: 700,
+              fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
+            }}>■ End session</button>
           )}
         </div>
       </Card>
 
       {/* Today's sessions + Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        {/* Today's sessions */}
         <Card>
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
               Today's sessions ({todaySessions.length})
             </span>
-            <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{todayKey}</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{todayKey}</span>
           </div>
 
           {todaySessions.length === 0 && <Empty>No sessions today. Start the timer!</Empty>}
 
-          <div className="flex flex-col gap-2 mb-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
             {todaySessions.map((s, i) => (
-              <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-btn text-[13px]"
-                style={{ background: 'var(--surface2)' }}>
-                <div className="w-6 h-6 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</div>
-                <span className="flex-1 font-mono text-xs" style={{ color: 'var(--muted)' }}>
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 8,
+                background: 'var(--surface2)', flexWrap: 'wrap'
+              }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: '50%',
+                  background: '#2563EB', color: '#fff',
+                  fontSize: 11, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0
+                }}>{i + 1}</div>
+                <span style={{ flex: 1, fontFamily: 'monospace', fontSize: 12, color: 'var(--muted)', minWidth: 0 }}>
                   {fmt(new Date(s.start))} → {s.end ? fmt(new Date(s.end)) : '—'}
                 </span>
-                <span className="font-bold" style={{ color: '#2563EB' }}>{formatSeconds(s.durationSec)}</span>
-                <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                <span style={{ fontWeight: 700, color: '#2563EB', fontSize: 13 }}>
+                  {formatSeconds(s.durationSec)}
+                </span>
               </div>
             ))}
           </div>
 
-          {/* Today's progress bar */}
-          <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-btn text-[13px] font-semibold ${
-            hoursToday >= dailyTarget ? 'bg-success-light text-success' :
-            hoursToday >= 3 ? 'bg-amber-light text-amber' : 'bg-danger-light text-danger'
-          }`}>
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: hoursToday >= dailyTarget ? '#DCFCE7' : hoursToday >= 3 ? '#FEF3C7' : '#FEE2E2',
+            color: hoursToday >= dailyTarget ? '#16A34A' : hoursToday >= 3 ? '#D97706' : '#DC2626',
+          }}>
             {hoursToday >= dailyTarget ? '✅' : hoursToday >= 3 ? '⚠' : '✕'}
-            {' '}{hoursToday}h today — minimum is {dailyTarget}h
-            {hoursToday >= dailyTarget ? ', target met!' : ', keep going!'}
+            {' '}{hoursToday}h today — target is {dailyTarget}h
+            {hoursToday >= dailyTarget ? ' · target met!' : ' · keep going!'}
           </div>
         </Card>
 
-        {/* Daily study hours chart */}
         <Card>
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Daily study hours</span>
-            <span className="text-[11px]" style={{ color: 'var(--muted)' }}>Last 30 days</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
+              Daily study hours
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>Last 30 days</span>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 9 }} interval={3} />
+              <XAxis dataKey="date" tick={{ fontSize: 9 }} interval={4} />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip formatter={(v: number) => [`${v}h`, 'Hours']} />
-              <ReferenceLine y={dailyTarget} stroke="#16A34A" strokeDasharray="4 3" label={{ value: `${dailyTarget}h min`, position: 'right', fontSize: 10, fill: '#16A34A' }} />
+              <ReferenceLine y={dailyTarget} stroke="#16A34A" strokeDasharray="4 3" />
               <Bar dataKey="hours" radius={[3, 3, 0, 0]}>
                 {chartData.map((entry, i) => (
-                  <Cell key={i}
-                    fill={entry.hours >= dailyTarget ? '#16A34A' : entry.hours >= 3 ? '#D97706' : '#DC2626'}
-                  />
+                  <Cell key={i} fill={entry.hours >= dailyTarget ? '#16A34A' : entry.hours >= 3 ? '#D97706' : '#DC2626'} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          {/* Legend */}
-          <div className="flex gap-4 mt-1 text-[11px] justify-center flex-wrap" style={{ color: 'var(--muted)' }}>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-success" /> ≥6h (target met)</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-amber" /> 3–6h</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-danger" /> &lt;3h</span>
+          <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 11, justifyContent: 'center', flexWrap: 'wrap', color: 'var(--muted)' }}>
+            <span>🟢 ≥6h</span>
+            <span>🟡 3–6h</span>
+            <span>🔴 &lt;3h</span>
           </div>
         </Card>
       </div>
 
-      {/* All-time stats */}
+      {/* All-time stats — responsive grid */}
       <Card>
         <CardHeader title="All-time study stats" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 }}>
           {[
-            ['Total days', totalDays, 'var(--text)'],
-            ['Total hours', totalHours + 'h', 'var(--text)'],
-            ['Daily avg', dailyAvg + 'h', 'var(--text)'],
-            ['Best day', bestDay + 'h', '#16A34A'],
-            [`Target days (≥${dailyTarget}h)`, targetDays, '#2563EB'],
-            ['Below target', belowTarget, '#DC2626'],
-          ].map(([label, val, color]) => (
-            <div key={String(label)} className="px-4 py-3 rounded-btn text-center" style={{ background: 'var(--surface2)' }}>
-              <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>{label}</div>
-              <div className="text-2xl font-bold" style={{ color: String(color) }}>{val}</div>
+            { label: 'Total days', val: totalDays, color: 'var(--text)' },
+            { label: 'Total hours', val: `${totalHours}h`, color: 'var(--text)' },
+            { label: 'Daily avg', val: `${dailyAvg}h`, color: 'var(--text)' },
+            { label: 'Best day', val: `${bestDay}h`, color: '#16A34A' },
+            { label: `≥${dailyTarget}h days`, val: targetDays, color: '#2563EB' },
+            { label: 'Below target', val: belowTarget, color: '#DC2626' },
+          ].map(({ label, val, color }) => (
+            <div key={label} style={{
+              padding: '12px 8px', borderRadius: 8,
+              background: 'var(--surface2)', textAlign: 'center'
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', marginBottom: 4 }}>
+                {label}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 700, color }}>{val}</div>
             </div>
           ))}
         </div>

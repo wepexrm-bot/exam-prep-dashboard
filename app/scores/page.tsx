@@ -14,10 +14,10 @@ export default function ScoresPage() {
   const chartData = sorted.map(s => ({ date: s.date.slice(5), score: s.score, acc: s.accuracy }));
 
   function rating(score: number) {
-    if (score >= 80) return '🔥 Excellent';
-    if (score >= 65) return '✅ Good';
-    if (score >= 50) return '⚠ Average';
-    return '❌ Needs work';
+    if (score >= 80) return { label: '🔥 Excellent', color: '#16A34A' };
+    if (score >= 65) return { label: '✅ Good', color: '#2563EB' };
+    if (score >= 50) return { label: '⚠ Average', color: '#D97706' };
+    return { label: '❌ Needs work', color: '#DC2626' };
   }
 
   return (
@@ -26,6 +26,7 @@ export default function ScoresPage() {
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>Log today ↗</button>
       </PageHeader>
 
+      {/* Chart */}
       <Card className="mb-4">
         <CardHeader title="Score history (last 30 days)" />
         {chartData.length === 0 ? (
@@ -44,37 +45,48 @@ export default function ScoresPage() {
         )}
       </Card>
 
-      <Card>
+      {/* Desktop table — hidden on mobile */}
+      <Card className="hidden md:block">
         <CardHeader title={`All entries (${scores.length})`} />
         {scores.length === 0 && <Empty>No scores logged yet.</Empty>}
         {scores.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px]">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
               <thead>
-                <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Date', 'Score', 'Accuracy', 'Study hours', 'Rating', ''].map(h => (
-                    <th key={h} className="text-left py-2 pr-4 text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>{h}</th>
+                    <th key={h} style={{
+                      textAlign: 'left', padding: '8px 16px 8px 0',
+                      fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                      letterSpacing: '0.05em', color: 'var(--muted)'
+                    }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {scores.map(s => {
                   const barBg = s.score >= 70 ? '#16A34A' : s.score >= 50 ? '#D97706' : '#DC2626';
+                  const r = rating(s.score);
                   return (
-                    <tr key={s.date} className="border-b hover:bg-[var(--surface2)] transition-colors group" style={{ borderColor: 'var(--border)' }}>
-                      <td className="py-2.5 pr-4" style={{ color: 'var(--muted)' }}>{s.date}</td>
-                      <td className="py-2.5 pr-4">
-                        <strong style={{ color: 'var(--text)' }}>{s.score}%</strong>
-                        <div className="h-1 rounded-full mt-1" style={{ width: `${Math.min(100, s.score)}%`, maxWidth: 100, background: barBg }} />
+                    <tr key={s.date} style={{ borderBottom: '1px solid var(--border)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface2)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                      <td style={{ padding: '10px 16px 10px 0', color: 'var(--muted)' }}>{s.date}</td>
+                      <td style={{ padding: '10px 16px 10px 0' }}>
+                        <strong style={{ color: 'var(--text)' }}>{s.score > 0 ? `${s.score}%` : '—'}</strong>
+                        {s.score > 0 && <div style={{ height: 4, borderRadius: 99, marginTop: 4, width: `${Math.min(100, s.score)}%`, maxWidth: 80, background: barBg }} />}
                       </td>
-                      <td className="py-2.5 pr-4" style={{ color: 'var(--text)' }}>{s.accuracy}%</td>
-                      <td className="py-2.5 pr-4" style={{ color: 'var(--text)' }}>{s.hours}h</td>
-                      <td className="py-2.5 pr-4" style={{ color: 'var(--text)' }}>{rating(s.score)}</td>
-                      <td className="py-2.5">
+                      <td style={{ padding: '10px 16px 10px 0', color: 'var(--text)' }}>{s.accuracy > 0 ? `${s.accuracy}%` : '—'}</td>
+                      <td style={{ padding: '10px 16px 10px 0', color: 'var(--text)' }}>{s.hours > 0 ? `${s.hours}h` : '—'}</td>
+                      <td style={{ padding: '10px 16px 10px 0', color: r.color, fontSize: 12 }}>{s.score > 0 ? r.label : '—'}</td>
+                      <td style={{ padding: '10px 0' }}>
                         <button
-                          onClick={() => { if (confirm(`Delete score for ${s.date}?`)) { deleteScore(s.date); showToast('Score deleted'); } }}
-                          className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border transition-all"
-                          style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                          onClick={() => { if (confirm(`Delete entry for ${s.date}?`)) { deleteScore(s.date); showToast('Entry deleted'); } }}
+                          style={{
+                            background: 'none', border: '1px solid var(--border)',
+                            color: 'var(--muted)', cursor: 'pointer', fontSize: 11,
+                            padding: '2px 8px', borderRadius: 4, fontFamily: 'inherit'
+                          }}>✕</button>
                       </td>
                     </tr>
                   );
@@ -84,6 +96,66 @@ export default function ScoresPage() {
           </div>
         )}
       </Card>
+
+      {/* Mobile cards — shown only on mobile */}
+      <div className="md:hidden">
+        <div style={{
+          fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.05em', color: 'var(--muted)', marginBottom: 8
+        }}>All entries ({scores.length})</div>
+        {scores.length === 0 && (
+          <Card><Empty>No scores logged yet.</Empty></Card>
+        )}
+        {scores.map(s => {
+          const r = rating(s.score);
+          const barBg = s.score >= 70 ? '#16A34A' : s.score >= 50 ? '#D97706' : '#DC2626';
+          return (
+            <div key={s.date} style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: 8
+            }}>
+              {/* Date + delete */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{s.date}</span>
+                <button
+                  onClick={() => { if (confirm(`Delete entry for ${s.date}?`)) { deleteScore(s.date); showToast('Entry deleted'); } }}
+                  style={{
+                    background: 'none', border: '1px solid var(--border)',
+                    color: 'var(--muted)', cursor: 'pointer', fontSize: 11,
+                    padding: '2px 8px', borderRadius: 4, fontFamily: 'inherit'
+                  }}>✕</button>
+              </div>
+              {/* Stats row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 2 }}>SCORE</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+                    {s.score > 0 ? `${s.score}%` : '—'}
+                  </div>
+                  {s.score > 0 && (
+                    <div style={{ height: 3, borderRadius: 99, marginTop: 4, width: `${s.score}%`, background: barBg }} />
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 2 }}>ACCURACY</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+                    {s.accuracy > 0 ? `${s.accuracy}%` : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 2 }}>HOURS</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+                    {s.hours > 0 ? `${s.hours}h` : '—'}
+                  </div>
+                </div>
+              </div>
+              {s.score > 0 && (
+                <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: r.color }}>{r.label}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       <ScoreModal open={showModal} onClose={() => setShowModal(false)} />
     </>
