@@ -122,7 +122,7 @@ export default function DashboardPage() {
   const todayScore = (data.dailyScores || []).find(s => s.date === todayKey);
 
   // ✅ Streak fix: uses today() helper — same format as stored dates
-  const streak = computeStreak(data.dailyScores || []);
+  const streak = computeStreak(data);
 
   const pred = getPrediction(data, examType);
   const pyqData = data.pyqData || [];
@@ -240,7 +240,7 @@ export default function DashboardPage() {
         <MetricCard
           label="Study streak"
           value={<>{streak}<sup className="text-sm font-normal" style={{ color: 'var(--muted)' }}> days</sup></>}
-          sub={streak > 0 ? '🔥 Keep going!' : 'Log today to start'}
+          sub={streak > 0 ? '🔥 Keep going!' : 'Be active to start'}
           subColor={streak > 0 ? 'up' : 'muted'}
         />
         <MetricCard
