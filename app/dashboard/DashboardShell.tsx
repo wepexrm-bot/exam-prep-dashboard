@@ -1,4 +1,5 @@
 'use client';
+import { NotificationManager } from '@/components/NotificationManager';
 import { useState } from 'react';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -35,6 +36,7 @@ function Shell({ username, examType, children }: { username: string; examType: E
       </main>
       <MobileBottomNav />
       <ToastContainer />
+      <NotificationManager />
     </div>
   );
 }
