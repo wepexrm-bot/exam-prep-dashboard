@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   await connectDB();
   const { currentPassword, newPassword } = await req.json();
 
-  const user = await User.findOne({ username: auth.user });
+  const user = await User.findOne({ username: auth.name });
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   const valid = await user.comparePassword(currentPassword);
