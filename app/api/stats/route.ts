@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
-  const doc = await AppData.findOne({ username: auth.user }).lean() as Record<string, unknown> | null;
+  const doc = await AppData.findOne({ username: auth.name }).lean() as Record<string, unknown> | null;
   if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const json = JSON.stringify(doc);
