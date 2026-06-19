@@ -2,19 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { AppData } from '@/models/AppData';
 import { requireAuth } from '@/lib/auth';
-import { DEFAULT_NET_SUBJECTS } from '@/lib/constants';
+import { EXAM_CONFIG } from '@/lib/constants';
 
 export async function GET(req: NextRequest) {
   const auth = requireAuth(req);
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
-  let doc = await AppData.findOne({ username: auth.user }).lean();
+
+  // Look up by userId first (new accounts), fall back to username (migrated admin account)
+  let doc = await AppData.findOne({ userId: auth.userId }).lean();
+  if (!doc) {
+    // Fallback for old admin data during migration period
+    doc = await AppData.findOne({ username: auth.name }).lean();
+    if (doc) {
+      // Auto-migrate: attach userId to this document so future lookups use userId
+      await AppData.findOneAndUpdate({ username: auth.name }, { $set: { userId: auth.userId } });
+    }
+  }
 
   if (!doc) {
+    // Brand new user — create fresh AppData with default subjects for their exam type
+    const defaultSubjects = (EXAM_CONFIG[auth.examType]?.subjects || []).map((name: string) => ({
+      name, pct: 0, completed: false, chapters: [],
+    }));
     doc = await AppData.create({
-      username: auth.user,
-      subjects: DEFAULT_NET_SUBJECTS.map((name) => ({ name, pct: 0, completed: false, chapters: [] })),
+      userId: auth.userId,
+      subjects: defaultSubjects,
     });
   }
 
@@ -29,9 +43,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   body.lastUpdated = new Date();
 
+  // Always save by userId for new/migrated accounts
   const doc = await AppData.findOneAndUpdate(
-    { username: auth.user },
-    { $set: body },
+    { userId: auth.userId },
+    { $set: { ...body, userId: auth.userId } },
     { upsert: true, new: true }
   ).lean();
 

@@ -1,7 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-// ── Sub-schemas ────────────────────────────────────────────
-
 const ChapterSchema = new Schema(
   { name: String, done: { type: Boolean, default: false } },
   { _id: false }
@@ -18,48 +16,28 @@ const SubjectSchema = new Schema(
 );
 
 const GoalSchema = new Schema(
-  {
-    id: Number,
-    text: String,
-    tag: String,
-    done: { type: Boolean, default: false },
-  },
+  { id: Number, text: String, tag: String, done: { type: Boolean, default: false } },
   { _id: false }
 );
 
 const DailyScoreSchema = new Schema(
-  {
-    date: String, // YYYY-MM-DD
-    score: Number,
-    accuracy: Number,
-    hours: Number,
-  },
+  { date: String, score: Number, accuracy: Number, hours: Number },
   { _id: false }
 );
 
 const MockTestSchema = new Schema(
-  {
-    date: String,
-    score: Number,
-    total: Number,
-    subject: String,
-  },
+  { date: String, score: Number, total: Number, subject: String },
   { _id: false }
 );
 
 const PYQSessionSchema = new Schema(
-  {
-    attempted: Number,
-    correct: Number,
-    accuracy: Number,
-    date: String,
-  },
+  { attempted: Number, correct: Number, accuracy: Number, date: String },
   { _id: false }
 );
 
 const PYQChapterSchema = new Schema(
   {
-    key: String, // "SubjectName::ChapterName"
+    key: String,
     total: Number,
     sessions: { type: [PYQSessionSchema], default: [] },
   },
@@ -67,29 +45,18 @@ const PYQChapterSchema = new Schema(
 );
 
 const RevisionSchema = new Schema(
-  {
-    topic: String,
-    subject: String,
-    intervalDays: Number,
-    notes: String,
-    lastRevised: String, // YYYY-MM-DD
-  },
+  { topic: String, subject: String, intervalDays: Number, notes: String, lastRevised: String },
   { _id: false }
 );
 
 const StudySessionSchema = new Schema(
-  {
-    start: String,
-    end: String,
-    durationSec: Number,
-  },
+  { start: String, end: String, durationSec: Number },
   { _id: false }
 );
 
-// ── Main AppData Schema ────────────────────────────────────
-
 export interface IAppData extends Document {
-  username: string;
+  userId?: string;       // new — ObjectId string of the user
+  username?: string;     // kept for backward compatibility during migration
   goals: typeof GoalSchema[];
   subjects: typeof SubjectSchema[];
   dailyScores: typeof DailyScoreSchema[];
@@ -103,7 +70,8 @@ export interface IAppData extends Document {
 
 const AppDataSchema = new Schema<IAppData>(
   {
-    username: { type: String, required: true, unique: true },
+    userId: { type: String, sparse: true, index: true },
+    username: { type: String, sparse: true },
     goals: { type: [GoalSchema], default: [] },
     subjects: { type: [SubjectSchema], default: [] },
     dailyScores: { type: [DailyScoreSchema], default: [] },
