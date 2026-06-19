@@ -11,6 +11,6 @@ export function makeAuthLayout(pageName: string) {
     const token = cookieStore.get('gate_token')?.value;
     const auth = token ? verifyToken(token) : null;
     if (!auth) redirect('/login');
-    return <DashboardShell username={auth.name} examType={'GATE'}>{children}</DashboardShell>;
+    return <DashboardShell username={auth.name} examType={auth.examType}>{children}</DashboardShell>;
   };
 }

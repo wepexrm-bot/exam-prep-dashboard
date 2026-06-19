@@ -8,5 +8,5 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const token = cookieStore.get('gate_token')?.value;
   const auth = token ? verifyToken(token) : null;
   if (!auth) redirect('/login');
-  return <DashboardShell username={auth.user} examType={auth.examType}>{children}</DashboardShell>;
+  return <DashboardShell username={auth.name} examType={auth.examType}>{children}</DashboardShell>;
 }

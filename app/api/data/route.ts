@@ -11,13 +11,13 @@ export async function GET(req: NextRequest) {
   await connectDB();
 
   // Look up by userId first (new accounts), fall back to username (migrated admin account)
-  let doc = await AppData.findOne({ userId: auth.userId }).lean();
+  let doc = await AppData.findOne({ userId: auth.nameId }).lean();
   if (!doc) {
     // Fallback for old admin data during migration period
     doc = await AppData.findOne({ username: auth.name }).lean();
     if (doc) {
       // Auto-migrate: attach userId to this document so future lookups use userId
-      await AppData.findOneAndUpdate({ username: auth.name }, { $set: { userId: auth.userId } });
+      await AppData.findOneAndUpdate({ username: auth.name }, { $set: { userId: auth.nameId } });
     }
   }
 
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       name, pct: 0, completed: false, chapters: [],
     }));
     doc = await AppData.create({
-      userId: auth.userId,
+      userId: auth.nameId,
       subjects: defaultSubjects,
     });
   }
@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
 
   // Always save by userId for new/migrated accounts
   const doc = await AppData.findOneAndUpdate(
-    { userId: auth.userId },
-    { $set: { ...body, userId: auth.userId } },
+    { userId: auth.nameId },
+    { $set: { ...body, userId: auth.nameId } },
     { upsert: true, new: true }
   ).lean();
 
