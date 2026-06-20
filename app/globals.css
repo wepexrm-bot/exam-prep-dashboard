@@ -41,6 +41,11 @@
 
   * { box-sizing: border-box; }
 
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   body {
     background: var(--bg);
     color: var(--text);
@@ -171,11 +176,13 @@
   .panel {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 18px; padding: 16px;
+    max-width: 100%; box-sizing: border-box; overflow-x: hidden;
   }
 
   .stat-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
     padding: 12px 10px; display: flex; flex-direction: column; gap: 8px;
+    min-width: 0;
   }
   .dark .stat-card.hero {
     background: linear-gradient(160deg, var(--neon-cyan), var(--neon-blue)); border: none;

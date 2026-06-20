@@ -173,17 +173,18 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 12, width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Welcome back,</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
             {displayName} 
             <span style={{
               background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)',
               color: '#22D3EE', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 99,
+              maxWidth: '100%', overflowWrap: 'break-word',
             }}>{cfg.emoji} {cfg.label} · {getDateLabel()}</span>
           </div>
         </div>
@@ -196,7 +197,7 @@ export default function DashboardPage() {
         }}>{displayName.charAt(0).toUpperCase()}</div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, minWidth: 0 }}>
         <div className="stat-card">
           <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>PYQs Solved</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -255,9 +256,9 @@ export default function DashboardPage() {
         <div style={{ fontSize: 11, color: weekDelta >= 0 ? '#4ADE80' : '#F87171', margin: '8px 0 6px' }}>
           {weekDelta >= 0 ? '↗' : '↘'} {Math.abs(weekDelta)}% vs last week{weekDelta >= 0 ? '! Keep it up!' : ''}
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: 110, gap: 8, marginTop: 10, position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: 110, gap: 8, marginTop: 10, position: 'relative', minWidth: 0, width: '100%' }}>
           {weekDays.map((d, i) => (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end', position: 'relative' }}
+            <div key={i} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end', position: 'relative' }}
               onMouseEnter={() => setHoverDay(i)} onMouseLeave={() => setHoverDay(null)}>
               {hoverDay === i && d.hours > 0 && (
                 <div style={{
