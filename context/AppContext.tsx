@@ -8,10 +8,12 @@ interface AppContextType {
   data: AppData;
   loading: boolean;
   examType: ExamType;
+  username: string;
   loadData: () => Promise<void>;
   syncToServer: (patch?: Partial<AppData>) => Promise<void>;
   toggleGoal: (id: number) => Promise<void>;
   addGoal: (goal: Omit<Goal, 'id'>) => Promise<void>;
+  updateGoal: (id: number, patch: Partial<Omit<Goal, 'id'>>) => Promise<void>;
   deleteGoal: (id: number) => Promise<void>;
   clearDoneGoals: () => Promise<void>;
   clearAllGoals: () => Promise<void>;
@@ -56,8 +58,17 @@ async function apiCall(method: string, url: string, body?: unknown) {
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
-export function AppProvider({ children, examType: examTypeProp }: { children: React.ReactNode; examType: ExamType }) {
+export function AppProvider({
+  children,
+  examType: examTypeProp,
+  username: usernameProp,
+}: {
+  children: React.ReactNode;
+  examType: ExamType;
+  username?: string;
+}) {
   const examType: ExamType = (examTypeProp && (examTypeProp === "GATE" || examTypeProp === "NET")) ? examTypeProp : "GATE";
+  const username = usernameProp || '';
   const defaultSubjects = EXAM_CONFIG[examType].subjects.map(name => ({
     name, pct: 0, completed: false, chapters: [],
   }));
@@ -81,7 +92,7 @@ export function AppProvider({ children, examType: examTypeProp }: { children: Re
     try {
       const d = await apiCall('GET', '/api/data');
       setData({
-        goals: d.goals || [],
+        goals: (d.goals || []).map((g: any) => ({ ...g, date: g.date || today() })),
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
         dailyScores: d.dailyScores || [],
         mockTests: d.mockTests || [],
@@ -103,8 +114,6 @@ export function AppProvider({ children, examType: examTypeProp }: { children: Re
     catch { /* silent */ }
   }, [data]);
 
-  // ── Helpers ──────────────────────────────────────────────
-
   function update(fn: (prev: AppData) => AppData) {
     setData(prev => {
       const next = fn(prev);
@@ -122,6 +131,10 @@ export function AppProvider({ children, examType: examTypeProp }: { children: Re
       const newId = Math.max(0, ...prev.goals.map(g => g.id)) + 1;
       return { ...prev, goals: [...prev.goals, { ...goal, id: newId }] };
     });
+  }, []);
+
+  const updateGoal = useCallback(async (id: number, patch: Partial<Omit<Goal, 'id'>>) => {
+    update(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, ...patch } : g) }));
   }, []);
 
   const deleteGoal = useCallback(async (id: number) => {
@@ -275,8 +288,8 @@ export function AppProvider({ children, examType: examTypeProp }: { children: Re
 
   return (
     <AppContext.Provider value={{
-      data, loading, examType, loadData, syncToServer,
-      toggleGoal, addGoal, deleteGoal, clearDoneGoals, clearAllGoals,
+      data, loading, examType, username, loadData, syncToServer,
+      toggleGoal, addGoal, updateGoal, deleteGoal, clearDoneGoals, clearAllGoals,
       addScore, deleteScore, addMock, deleteMock,
       addPYQSession, deletePYQSession,
       addRevision, markRevised, deleteRevision,

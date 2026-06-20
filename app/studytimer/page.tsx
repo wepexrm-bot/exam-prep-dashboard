@@ -1,15 +1,20 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { PageHeader, Card, CardHeader, Empty, showToast } from '@/components/ui';
+import { Empty, showToast } from '@/components/ui';
 import { formatSeconds } from '@/lib/utils';
 import { StudySession } from '@/lib/types';
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ReferenceLine, Cell,
-} from 'recharts';
 
 function today() { return new Date().toISOString().split('T')[0]; }
+
+const I = {
+  play: <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>,
+  pause: <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg>,
+  stop: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg>,
+  clock: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="13" r="8" stroke="currentColor" strokeWidth="2"/><path d="M12 9v4l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  bars: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  trophy: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M7 6H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 6h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4" stroke="currentColor" strokeWidth="2"/></svg>,
+};
 
 export default function StudyTimerPage() {
   const { data, addStudySession } = useApp();
@@ -17,6 +22,7 @@ export default function StudyTimerPage() {
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
   const [pausedAt, setPausedAt] = useState(0);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const startRef = useRef<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -26,7 +32,6 @@ export default function StudyTimerPage() {
   );
   const totalTodaySec = todaySessions.reduce((a, s) => a + s.durationSec, 0);
   const hoursToday = Math.round(totalTodaySec / 3600 * 10) / 10;
-  const weeklyTarget = data.weeklyTarget || 12;
   const dailyTarget = 6;
 
   useEffect(() => {
@@ -109,24 +114,18 @@ export default function StudyTimerPage() {
     startRef.current = null;
   }
 
-  // Chart data
   const sessions = data.studySessions || [];
-  const last30: Record<string, number> = {};
-  for (let i = 29; i >= 0; i--) {
+  const last14: { date: string; hours: number; sessions: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    last30[d.toISOString().split('T')[0]] = 0;
+    const dKey = d.toISOString().split('T')[0];
+    const daySessions = sessions.filter(s => s.start?.startsWith(dKey));
+    const hrs = daySessions.reduce((a, s) => a + s.durationSec, 0) / 3600;
+    last14.push({ date: dKey, hours: Math.round(hrs * 10) / 10, sessions: daySessions.length });
   }
-  sessions.forEach(s => {
-    const day = s.start?.split('T')[0];
-    if (day && last30[day] !== undefined) last30[day] += s.durationSec / 3600;
-  });
-  const chartData = Object.entries(last30).map(([date, hours]) => ({
-    date: date.slice(5),
-    hours: Math.round(hours * 10) / 10,
-  }));
+  const maxH = Math.max(1, ...last14.map(d => d.hours));
 
-  // All-time stats
   const dayTotals: Record<string, number> = {};
   sessions.forEach(s => {
     const day = s.start?.split('T')[0];
@@ -138,165 +137,202 @@ export default function StudyTimerPage() {
   const dailyAvg = totalDays ? Math.round(totalHours / totalDays * 10) / 10 : 0;
   const bestDay = allDays.length ? Math.round(Math.max(...allDays) * 10) / 10 : 0;
   const targetDays = allDays.filter(h => h >= dailyTarget).length;
-  const belowTarget = allDays.filter(h => h < dailyTarget).length;
 
-  const statusText = !running ? 'Session stopped — start a new one anytime'
-    : paused ? '⏸ Session paused' : '● Recording session';
-  const statusColor = !running ? 'var(--muted)' : paused ? '#D97706' : '#16A34A';
+  const statusText = !running ? 'Ready to start a new session'
+    : paused ? 'Session paused' : 'Recording session';
+  const statusColor = !running ? 'var(--muted)' : paused ? '#FB923C' : '#4ADE80';
   const fmt = (d: Date) => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
   return (
-    <>
-      <PageHeader title="Study Timer" sub={new Date().toLocaleDateString('en-IN', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-      })} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 12 }}>
+      <style>{`@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
 
-      {/* Timer card */}
-      <Card className="text-center mb-4">
+      <div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>Study Timer</h1>
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 0' }}>
+          {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+
+      <div className="panel" style={{ textAlign: 'center', padding: '28px 16px' }}>
         <div style={{
           fontFamily: 'JetBrains Mono, monospace',
-          fontSize: 'clamp(40px, 12vw, 80px)',
+          fontSize: 'clamp(40px, 12vw, 72px)',
           fontWeight: 700, lineHeight: 1,
-          margin: '16px 0', letterSpacing: 4,
-          color: running && !paused ? '#16A34A' : paused ? '#D97706' : 'var(--text)',
-          wordBreak: 'break-all'
+          margin: '8px 0 16px', letterSpacing: 3,
+          color: running && !paused ? '#4ADE80' : paused ? '#FB923C' : '#fff',
+          textShadow: running && !paused ? '0 0 30px rgba(74,222,128,0.4)' : paused ? '0 0 30px rgba(251,146,60,0.3)' : 'none',
+          wordBreak: 'break-all',
         }}>
           {formatSeconds(elapsed)}
         </div>
         <div style={{
-          fontSize: 13, marginBottom: 20,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          color: statusColor
+          fontSize: 13, marginBottom: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          color: statusColor,
         }}>
           {running && !paused && (
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A34A', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ADE80', boxShadow: '0 0 8px #4ADE80', animation: 'timerPulse 1.2s infinite' }} />
           )}
           {statusText}
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           {(!running || paused) && (
             <button onClick={handleStart} style={{
-              background: '#16A34A', color: '#fff', border: 'none',
-              padding: '12px 28px', borderRadius: 8, fontWeight: 700,
-              fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
-            }}>▶ {paused ? 'Resume' : 'Start'}</button>
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'linear-gradient(135deg, #4ADE80, #16A34A)', color: '#0F172A', border: 'none',
+              padding: '13px 28px', borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif', boxShadow: '0 0 24px rgba(74,222,128,0.35)',
+            }}>{I.play} {paused ? 'Resume' : 'Start'}</button>
           )}
           {running && !paused && (
             <button onClick={handlePause} style={{
-              background: '#D97706', color: '#fff', border: 'none',
-              padding: '12px 28px', borderRadius: 8, fontWeight: 700,
-              fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
-            }}>⏸ Pause</button>
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'linear-gradient(135deg, #FB923C, #EA580C)', color: '#0F172A', border: 'none',
+              padding: '13px 28px', borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif', boxShadow: '0 0 24px rgba(251,146,60,0.35)',
+            }}>{I.pause} Pause</button>
           )}
           {running && (
             <button onClick={handleStop} style={{
-              background: '#DB2777', color: '#fff', border: 'none',
-              padding: '12px 28px', borderRadius: 8, fontWeight: 700,
-              fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif'
-            }}>■ End session</button>
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.06)', color: '#F87171', border: '1px solid rgba(248,113,113,0.3)',
+              padding: '13px 28px', borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif',
+            }}>{I.stop} End session</button>
           )}
         </div>
-      </Card>
-
-      {/* Today's sessions + Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
-              Today's sessions ({todaySessions.length})
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{todayKey}</span>
-          </div>
-
-          {todaySessions.length === 0 && <Empty>No sessions today. Start the timer!</Empty>}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-            {todaySessions.map((s, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 12px', borderRadius: 8,
-                background: 'var(--surface2)', flexWrap: 'wrap'
-              }}>
-                <div style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: '#2563EB', color: '#fff',
-                  fontSize: 11, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0
-                }}>{i + 1}</div>
-                <span style={{ flex: 1, fontFamily: 'monospace', fontSize: 12, color: 'var(--muted)', minWidth: 0 }}>
-                  {fmt(new Date(s.start))} → {s.end ? fmt(new Date(s.end)) : '—'}
-                </span>
-                <span style={{ fontWeight: 700, color: '#2563EB', fontSize: 13 }}>
-                  {formatSeconds(s.durationSec)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{
-            padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: hoursToday >= dailyTarget ? '#DCFCE7' : hoursToday >= 3 ? '#FEF3C7' : '#FEE2E2',
-            color: hoursToday >= dailyTarget ? '#16A34A' : hoursToday >= 3 ? '#D97706' : '#DC2626',
-          }}>
-            {hoursToday >= dailyTarget ? '✅' : hoursToday >= 3 ? '⚠' : '✕'}
-            {' '}{hoursToday}h today — target is {dailyTarget}h
-            {hoursToday >= dailyTarget ? ' · target met!' : ' · keep going!'}
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
-              Daily study hours
-            </span>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>Last 30 days</span>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={chartData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 9 }} interval={4} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: number) => [`${v}h`, 'Hours']} />
-              <ReferenceLine y={dailyTarget} stroke="#16A34A" strokeDasharray="4 3" />
-              <Bar dataKey="hours" radius={[3, 3, 0, 0]}>
-                {chartData.map((entry, i) => (
-                  <Cell key={i} fill={entry.hours >= dailyTarget ? '#16A34A' : entry.hours >= 3 ? '#D97706' : '#DC2626'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 11, justifyContent: 'center', flexWrap: 'wrap', color: 'var(--muted)' }}>
-            <span>🟢 ≥6h</span>
-            <span>🟡 3–6h</span>
-            <span>🔴 &lt;3h</span>
-          </div>
-        </Card>
       </div>
 
-      {/* All-time stats — responsive grid */}
-      <Card>
-        <CardHeader title="All-time study stats" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 }}>
-          {[
-            { label: 'Total days', val: totalDays, color: 'var(--text)' },
-            { label: 'Total hours', val: `${totalHours}h`, color: 'var(--text)' },
-            { label: 'Daily avg', val: `${dailyAvg}h`, color: 'var(--text)' },
-            { label: 'Best day', val: `${bestDay}h`, color: '#16A34A' },
-            { label: `≥${dailyTarget}h days`, val: targetDays, color: '#2563EB' },
-            { label: 'Below target', val: belowTarget, color: '#DC2626' },
-          ].map(({ label, val, color }) => (
-            <div key={label} style={{
-              padding: '12px 8px', borderRadius: 8,
-              background: 'var(--surface2)', textAlign: 'center'
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 14,
+        background: hoursToday >= dailyTarget ? 'rgba(74,222,128,0.1)' : hoursToday >= 3 ? 'rgba(251,146,60,0.1)' : 'rgba(248,113,113,0.08)',
+        border: `1px solid ${hoursToday >= dailyTarget ? 'rgba(74,222,128,0.3)' : hoursToday >= 3 ? 'rgba(251,146,60,0.3)' : 'rgba(248,113,113,0.2)'}`,
+      }}>
+        <span style={{
+          fontSize: 13, fontWeight: 700,
+          color: hoursToday >= dailyTarget ? '#4ADE80' : hoursToday >= 3 ? '#FB923C' : '#F87171',
+        }}>{hoursToday}h today</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>— target {dailyTarget}h {hoursToday >= dailyTarget ? '· met! 🎉' : '· keep going!'}</span>
+      </div>
+
+      <div className="panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 24, height: 24, borderRadius: 8, background: 'rgba(34,211,238,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22D3EE' }}>{I.clock}</span>
+            Today's Sessions
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{todaySessions.length} session{todaySessions.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {todaySessions.length === 0 && <Empty>No sessions today. Start the timer!</Empty>}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {todaySessions.map((s, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap',
             }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', marginBottom: 4 }}>
-                {label}
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700, color }}>{val}</div>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', background: 'rgba(34,211,238,0.15)', color: '#22D3EE',
+                fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>{i + 1}</div>
+              <span style={{ flex: 1, fontFamily: 'monospace', fontSize: 11, color: 'var(--muted)', minWidth: 0 }}>
+                {fmt(new Date(s.start))} → {s.end ? fmt(new Date(s.end)) : '—'}
+              </span>
+              <span style={{ fontWeight: 700, color: '#22D3EE', fontSize: 12 }}>{formatSeconds(s.durationSec)}</span>
             </div>
           ))}
         </div>
-      </Card>
-    </>
+      </div>
+
+      <div className="panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 24, height: 24, borderRadius: 8, background: 'rgba(34,211,238,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22D3EE' }}>{I.bars}</span>
+            Study Hours: Last 14 Days
+          </span>
+          <span style={{ fontSize: 10, color: 'var(--muted)' }}>target: {dailyTarget}h/day</span>
+        </div>
+
+        <div style={{ position: 'relative', marginTop: 18 }}>
+          <div style={{
+            position: 'absolute', left: 0, right: 0,
+            bottom: `${Math.min(95, (dailyTarget / maxH) * 100)}%`,
+            borderTop: '1.5px dashed rgba(74,222,128,0.4)', zIndex: 1,
+          }}>
+            <span style={{
+              position: 'absolute', right: 0, top: -16, fontSize: 8, color: '#4ADE80', fontWeight: 700,
+              background: '#1C1F25', padding: '0 4px',
+            }}>{dailyTarget}h</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: 140, gap: 4, position: 'relative' }}>
+            {last14.map((d, i) => {
+              const heightPct = Math.max(3, (d.hours / maxH) * 100);
+              const isToday = d.date === todayKey;
+              const barColor = d.hours >= dailyTarget ? '#4ADE80' : d.hours >= 3 ? '#FB923C' : d.hours > 0 ? '#22D3EE' : 'rgba(255,255,255,0.08)';
+              const dateLabel = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end', position: 'relative' }}
+                  onMouseEnter={() => setHoverIdx(i)} onMouseLeave={() => setHoverIdx(null)}>
+                  {hoverIdx === i && d.hours > 0 && (
+                    <div style={{
+                      position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                      background: '#0F172A', border: `1px solid ${barColor}55`, borderRadius: 10,
+                      padding: '7px 10px', whiteSpace: 'nowrap', marginBottom: 8, zIndex: 5,
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.4)',
+                    }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#fff' }}>
+                        {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+                      </div>
+                      <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 2 }}>{d.hours}h · {d.sessions} session{d.sessions !== 1 ? 's' : ''}</div>
+                    </div>
+                  )}
+                  <div style={{
+                    width: '100%', maxWidth: 22, borderRadius: '6px 6px 3px 3px',
+                    height: `${heightPct}%`,
+                    background: d.hours > 0 ? `linear-gradient(180deg, ${barColor}, ${barColor}99)` : 'rgba(255,255,255,0.06)',
+                    boxShadow: isToday && d.hours > 0 ? `0 0 14px ${barColor}88` : 'none',
+                    border: isToday ? `1px solid ${barColor}` : 'none',
+                    transition: 'height 0.4s',
+                  }} />
+                  <span style={{ fontSize: 8, color: isToday ? '#22D3EE' : 'var(--muted)', fontWeight: isToday ? 700 : 400 }}>{dateLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 14, marginTop: 14, fontSize: 10, justifyContent: 'center', flexWrap: 'wrap', color: 'var(--muted)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 3, background: '#4ADE80', display: 'inline-block' }} />Target met</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 3, background: '#FB923C', display: 'inline-block' }} />3-6h</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 3, background: '#22D3EE', display: 'inline-block' }} />Below 3h</span>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <span style={{ width: 24, height: 24, borderRadius: 8, background: 'rgba(34,211,238,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22D3EE' }}>{I.trophy}</span>
+          All-Time Study Stats
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: 10 }}>
+          {[
+            { label: 'Total days', val: totalDays, color: '#fff' },
+            { label: 'Total hours', val: `${totalHours}h`, color: '#fff' },
+            { label: 'Daily avg', val: `${dailyAvg}h`, color: '#fff' },
+            { label: 'Best day', val: `${bestDay}h`, color: '#4ADE80' },
+            { label: `≥${dailyTarget}h days`, val: targetDays, color: '#22D3EE' },
+          ].map(({ label, val, color }) => (
+            <div key={label} style={{
+              padding: '12px 8px', borderRadius: 12, textAlign: 'center',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
+            }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', marginBottom: 6 }}>{label}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color }}>{val}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

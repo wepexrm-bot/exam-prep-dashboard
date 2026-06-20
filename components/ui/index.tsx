@@ -25,7 +25,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-[2px]"
+    <div className="fixed inset-0 z-[250] flex items-center justify-center backdrop-blur-[2px]"
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} className="rounded-card border p-6 w-[380px] max-w-[95vw] shadow-[0_20px_60px_rgba(0,0,0,0.2)]"

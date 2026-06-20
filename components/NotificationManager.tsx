@@ -23,7 +23,10 @@ const NOTIF_IDS = {
   REVISION: 1001,
   STREAK: 1002,
   WEEKLY: 1003,
+  GOAL_DEADLINE: 1004,
 };
+
+function todayKey() { return new Date().toISOString().split('T')[0]; }
 
 export function NotificationManager() {
   const { data } = useApp();
@@ -34,7 +37,6 @@ export function NotificationManager() {
     async function setup() {
       if (typeof window === 'undefined') return;
 
-      // Poll briefly for window.Capacitor since bridge injection can lag DOM ready
       let tries = 0;
       while (!window.Capacitor?.isNativePlatform?.() && tries < 20) {
         await new Promise(r => setTimeout(r, 100));
@@ -55,8 +57,9 @@ export function NotificationManager() {
         });
 
         const notifications: any[] = [];
+        const today = todayKey();
 
-        // ── 1. Revision reminder — every day at 9:00 AM if revisions are due
+        // ── 1. Revision reminder — 9:00 AM if revisions are due
         const revDue = (data.revisions || []).filter(r => {
           const next = new Date(r.lastRevised);
           next.setDate(next.getDate() + r.intervalDays);
@@ -72,14 +75,17 @@ export function NotificationManager() {
           });
         }
 
-        // ── 2. Streak reminder — every day at 3:00 PM if no activity logged today
-        const todayKey = new Date().toISOString().split('T')[0];
-        const hasScoreToday = (data.dailyScores || []).some(s => s.date === todayKey);
-        const hasStudyToday = (data.studySessions || []).some(s => s.start?.startsWith(todayKey));
+        // ── 2. Streak reminder — 3:00 PM if no activity logged today
+        const hasScoreToday = (data.dailyScores || []).some(s => s.date === today);
+        const hasStudyToday = (data.studySessions || []).some(s => s.start?.startsWith(today));
         const hasPYQToday = (data.pyqData || []).some(p =>
-          (p.sessions || []).some(s => s.date === todayKey)
+          (p.sessions || []).some(s => s.date === today)
         );
-        const activeToday = hasScoreToday || hasStudyToday || hasPYQToday;
+        const hasGoalDoneToday = (data.goals || []).some(g => {
+          const start = g.date; const end = g.endDate || g.date;
+          return g.done && today >= start && today <= end;
+        });
+        const activeToday = hasScoreToday || hasStudyToday || hasPYQToday || hasGoalDoneToday;
 
         if (!activeToday) {
           notifications.push({
@@ -90,7 +96,7 @@ export function NotificationManager() {
           });
         }
 
-        // ── 3. Weekly target reminder — every Sunday at 6:00 PM
+        // ── 3. Weekly target check-in — Sunday 6:00 PM
         const now = new Date();
         const monday = new Date(now);
         monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -110,6 +116,32 @@ export function NotificationManager() {
           schedule: { on: { weekday: 1, hour: 18, minute: 0 }, repeats: true },
         });
 
+        // ── 4. Goal deadline reminder — one-time, fires tomorrow at 8:00 AM
+        // if any ranged goal's endDate is tomorrow and it's not done yet
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowKey = tomorrow.toISOString().split('T')[0];
+
+        const upcomingDeadlines = (data.goals || []).filter(g =>
+          g.endDate && g.endDate === tomorrowKey && !g.done
+        );
+
+        if (upcomingDeadlines.length > 0) {
+          const firstGoal = upcomingDeadlines[0];
+          const extra = upcomingDeadlines.length > 1 ? ` (+${upcomingDeadlines.length - 1} more)` : '';
+
+          // Fire at 8:00 AM tomorrow — the actual deadline day
+          const fireAt = new Date(tomorrow);
+          fireAt.setHours(8, 0, 0, 0);
+
+          notifications.push({
+            id: NOTIF_IDS.GOAL_DEADLINE,
+            title: '🚩 Goal due today',
+            body: `"${firstGoal.text}"${extra} is due today. Make it count!`,
+            schedule: { at: fireAt },
+          });
+        }
+
         if (notifications.length > 0) {
           await LN.schedule({ notifications });
         }
@@ -121,7 +153,7 @@ export function NotificationManager() {
     setup();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.revisions, data.dailyScores, data.studySessions, data.pyqData, data.weeklyTarget]);
+  }, [data.revisions, data.dailyScores, data.studySessions, data.pyqData, data.weeklyTarget, data.goals]);
 
   return null;
 }

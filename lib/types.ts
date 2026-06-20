@@ -15,6 +15,8 @@ export interface Goal {
   text: string;
   tag: string;
   done: boolean;
+  date: string;        // YYYY-MM-DD — the day this goal starts/is set for
+  endDate?: string;    // YYYY-MM-DD — optional deadline for multi-day goals
 }
 
 export interface DailyScore {

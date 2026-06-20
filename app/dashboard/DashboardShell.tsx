@@ -1,5 +1,4 @@
 'use client';
-import { NotificationManager } from '@/components/NotificationManager';
 import { useState } from 'react';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -19,10 +18,14 @@ function Shell({ username, examType, children }: { username: string; examType: E
 
   return (
     <div className="flex min-h-screen">
+      {/* Desktop sidebar — hidden below md breakpoint (768px) */}
       <div className="hidden md:block">
         <Sidebar onSync={handleSync} username={username} examType={examType} />
       </div>
+
+      {/* Mobile top bar — hidden at md and above */}
       <MobileTopBar onOpenDrawer={() => setDrawerOpen(true)} examType={examType} />
+
       <MobileDrawer
         drawerOpen={drawerOpen}
         onCloseDrawer={() => setDrawerOpen(false)}
@@ -31,12 +34,15 @@ function Shell({ username, examType, children }: { username: string; examType: E
         username={username}
         examType={examType}
       />
+
       <main className="flex-1 md:ml-[230px] px-4 py-7 md:px-7 pt-[72px] md:pt-7 pb-[80px] md:pb-7 max-w-[1160px]">
         {children}
       </main>
+
+      {/* Mobile bottom nav — hidden at md and above */}
       <MobileBottomNav />
+
       <ToastContainer />
-      <NotificationManager />
     </div>
   );
 }
@@ -51,7 +57,7 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   return (
-    <AppProvider examType={examType}>
+    <AppProvider examType={examType} username={username}>
       <Shell username={username} examType={examType}>{children}</Shell>
     </AppProvider>
   );
