@@ -13,8 +13,7 @@ const transporter = GMAIL_USER && GMAIL_APP_PASSWORD
 export async function sendVerificationEmail(to: string, name: string, code: string) {
   if (!transporter) {
     console.warn('Email not configured — skipping verification email. Set GMAIL_USER and GMAIL_APP_PASSWORD.');
-    console.log(`[DEV] Verification code for ${to}: ${code}`);
-    return { success: false, code, error: new Error('Email not configured') };
+    return { success: false, error: new Error('Email not configured') };
   }
   try {
     await transporter.sendMail({
@@ -23,7 +22,7 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
       subject: `Your verification code: ${code}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #0F172A; border-radius: 16px;">
-          <h2 style="color: #fff; margin-bottom: 8px;">Hi ${name}</h2>
+          <h2 style="color: #fff; margin-bottom: 8px;">Hi ${name} 👋</h2>
           <p style="color: #94A3B8; font-size: 14px; line-height: 1.6;">
             Welcome to TargetZero! Use the code below to verify your account and start tracking your exam prep.
           </p>
@@ -39,7 +38,6 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
     return { success: true };
   } catch (err) {
     console.error('Email send error:', err);
-    console.log(`[FALLBACK] Verification code for ${to}: ${code}`);
-    return { success: false, code, error: err };
+    return { success: false, error: err };
   }
 }

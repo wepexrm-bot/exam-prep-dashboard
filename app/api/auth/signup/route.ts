@@ -71,9 +71,7 @@ export async function POST(req: NextRequest) {
 
     const emailResult = await sendVerificationEmail(normalizedEmail, name, code);
     if (!emailResult.success) {
-      const body: Record<string, unknown> = { error: 'Account created but failed to send verification email. Try resending.' };
-      if (emailResult.code) body.devCode = emailResult.code;
-      return NextResponse.json(body, { status: 207 });
+      return NextResponse.json({ error: 'Account created but failed to send verification email. Try resending.' }, { status: 207 });
     }
 
     return NextResponse.json({ success: true, email: normalizedEmail });

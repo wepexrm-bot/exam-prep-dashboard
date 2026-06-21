@@ -13,16 +13,12 @@ export default function LoginPage() {
 
   async function handleLogin() {
     setError(''); setLoading(true);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        signal: controller.signal,
       });
-      clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) {
         if (data.needsVerification) {
@@ -35,7 +31,6 @@ export default function LoginPage() {
       }
       router.push('/dashboard');
     } catch {
-      clearTimeout(timeout);
       setError('Network error. Please try again.');
       setLoading(false);
     }
