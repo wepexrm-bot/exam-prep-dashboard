@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     }));
     doc = await AppData.create({
       userId: auth.userId,
+      username: auth.userId,
       subjects: defaultSubjects,
     });
   }
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   // Always save by userId for new/migrated accounts
   const doc = await AppData.findOneAndUpdate(
     { userId: auth.userId },
-    { $set: { ...body, userId: auth.userId } },
+    { $set: { ...body, userId: auth.userId, username: auth.userId } },
     { upsert: true, new: true }
   ).lean();
 
