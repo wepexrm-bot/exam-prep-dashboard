@@ -1,17 +1,18 @@
 'use client';
+import { TrendingUp, Lightbulb, Calendar, ClipboardList } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { useApp } from '@/context/AppContext';
-import { EXAM_CONFIG } from '@/lib/constants';
+import { useExamConfig } from '@/lib/useExamConfig';
+import { today, dateKey } from '@/lib/utils';
 
-function today() { return new Date().toISOString().split('T')[0]; }
 function getFullDate() {
   return new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 export function ScoreModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data, addScore, examType } = useApp();
-  const cfg = EXAM_CONFIG[examType];
+  const { config: cfg } = useExamConfig(examType);
   const [score, setScore] = useState('');
   const [accuracy, setAccuracy] = useState('');
   const [hours, setHours] = useState('');
@@ -19,14 +20,13 @@ export function ScoreModal({ open, onClose }: { open: boolean; onClose: () => vo
   useEffect(() => {
     if (open) {
       const todayKey = today();
-      const todaySess = (data.studySessions || []).filter(s => s.start?.split('T')[0] === todayKey);
+      const todaySess = (data.studySessions || []).filter(s => s.start && dateKey(new Date(s.start)) === todayKey);
       const totalSec = todaySess.reduce((a, s) => a + s.durationSec, 0);
       if (totalSec > 0) setHours(String(Math.round((totalSec / 3600) * 10) / 10));
     }
   }, [open, data.studySessions]);
 
   async function handleSave() {
-    // Score and accuracy are optional — hours alone is enough to log activity
     if (!score && !hours) return showToast('Enter at least study hours or a score');
     await addScore({
       date: today(),
@@ -34,24 +34,22 @@ export function ScoreModal({ open, onClose }: { open: boolean; onClose: () => vo
       accuracy: Number(accuracy) || 0,
       hours: Number(hours) || 0,
     });
-    showToast('Activity logged ✓');
+    showToast('Activity logged');
     setScore(''); setAccuracy(''); setHours('');
     onClose();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="📈 Log today's activity">
-      <div className="px-3 py-1.5 rounded-btn mb-3 text-xs font-semibold"
-        style={{ background: cfg.colorLight, color: cfg.color }}>📅 {getFullDate()}</div>
+    <Modal open={open} onClose={onClose} title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><TrendingUp size={16} /> Log today's activity</span>}>
+      <div className="px-3 py-1.5 rounded-btn mb-3 text-xs font-semibold flex items-center gap-1.5"
+        style={{ background: cfg.colorLight, color: cfg.color }}><Calendar size={12} /> {getFullDate()}</div>
 
-      {/* Study hours — most important, shown first */}
       <FormGroup label="Study hours" hint="auto-fills from timer">
         <input className="form-input" type="number" min="0" max="24" step="0.5"
           placeholder="e.g. 6 (or leave if using timer)"
           value={hours} onChange={e => setHours(e.target.value)} />
       </FormGroup>
 
-      {/* Score and accuracy — optional */}
       <div style={{
         fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
         letterSpacing: '0.05em', color: 'var(--muted)',
@@ -74,8 +72,8 @@ export function ScoreModal({ open, onClose }: { open: boolean; onClose: () => vo
         </FormGroup>
       </div>
 
-      <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: 4, lineHeight: 1.6 }}>
-        💡 Logging activity without a score still counts toward your study streak.
+      <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: 4, lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+        <Lightbulb size={12} style={{ flexShrink: 0, marginTop: 2 }} /> Logging activity without a score still counts toward your study streak.
       </p>
 
       <ModalActions>
@@ -88,23 +86,27 @@ export function ScoreModal({ open, onClose }: { open: boolean; onClose: () => vo
 
 export function MockModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { addMock, examType } = useApp();
-  const cfg = EXAM_CONFIG[examType];
+  const { config: cfg } = useExamConfig(examType);
   const [score, setScore] = useState('');
   const [total, setTotal] = useState('100');
-  const [subject, setSubject] = useState(cfg.mockSubjects[0]);
+  const [subject, setSubject] = useState('');
+
+  useEffect(() => {
+    if (!subject && cfg.mockSubjects?.length) setSubject(cfg.mockSubjects[0]);
+  }, [cfg.mockSubjects, subject]);
 
   async function handleSave() {
     if (!score) return showToast('Enter a score');
     await addMock({ date: today(), score: Number(score), total: Number(total), subject });
-    showToast('Mock test logged ✓');
+    showToast('Mock test logged');
     setScore(''); setTotal('100');
     onClose();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="📝 Add mock test result">
-      <div className="px-3 py-1.5 rounded-btn mb-3 text-xs font-semibold"
-        style={{ background: cfg.colorLight, color: cfg.color }}>📅 {getFullDate()}</div>
+    <Modal open={open} onClose={onClose} title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={16} /> Add mock test result</span>}>
+      <div className="px-3 py-1.5 rounded-btn mb-3 text-xs font-semibold flex items-center gap-1.5"
+        style={{ background: cfg.colorLight, color: cfg.color }}><Calendar size={12} /> {getFullDate()}</div>
       <FormGroup label="Score obtained">
         <input className="form-input" type="number" placeholder="e.g. 52"
           value={score} onChange={e => setScore(e.target.value)} />

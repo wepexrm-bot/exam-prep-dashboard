@@ -54,11 +54,12 @@ export interface UserDoc {
   email: string;
   name: string;
   passwordHash: string;
-  examType: 'GATE' | 'NET';
+  examType: string;
   examYear: number;
   verified: boolean;
   verificationCode?: string;
   verificationExpires?: Date;
+  verifyAttempts?: number;
   createdAt: Date;
 }
 

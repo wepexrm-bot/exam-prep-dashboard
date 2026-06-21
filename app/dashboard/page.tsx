@@ -1,23 +1,24 @@
 'use client';
+import { Grid3X3, Clock, FileText, BarChart3, RefreshCw, Calendar, Flame, Plus, Timer } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Empty } from '@/components/ui';
-import { computeStreak, getDateLabel, getPrediction, today } from '@/lib/utils';
+import { computeStreak, getDateLabel, getPrediction, today, dateKey } from '@/lib/utils';
 import { ScoreModal } from '@/components/modals/ScoreModal';
 import { MockModal } from '@/components/modals/ScoreModal';
 import { EXAM_CONFIG } from '@/lib/constants';
 
 const Icon = {
-  all: <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2"/></svg>,
-  study: <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="13" r="8" stroke="currentColor" strokeWidth="2"/><path d="M9 2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
-  pyq: <svg viewBox="0 0 24 24" fill="none"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M14 3v6h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>,
-  mock: <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="3" height="9" rx="1" stroke="currentColor" strokeWidth="2"/><rect x="10.5" y="6" width="3" height="14" rx="1" stroke="currentColor" strokeWidth="2"/><rect x="17" y="3" width="3" height="17" rx="1" stroke="currentColor" strokeWidth="2"/></svg>,
-  revision: <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 0 1 15-6.7L21 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 3v5h-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 21v-5h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  bars: <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2" stroke="#22D3EE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  calendar: <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="#22D3EE" strokeWidth="2"/><path d="M3 9h18M8 3v4M16 3v4" stroke="#22D3EE" strokeWidth="2" strokeLinecap="round"/></svg>,
-  clock: <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke="#22D3EE" strokeWidth="2"/><path d="M12 9v4l3 2" stroke="#22D3EE" strokeWidth="2" strokeLinecap="round"/></svg>,
-  flame: <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-2.5.5 2 0 3-1 3.5a4 4 0 0 1-4-4c0-3 2.5-4.5 3-9Z" fill="#0F172A"/></svg>,
-  plus: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="#0F172A" strokeWidth="2.5" strokeLinecap="round"/></svg>,
+  all: <Grid3X3 size={14} />,
+  study: <Timer size={14} />,
+  pyq: <FileText size={14} />,
+  mock: <BarChart3 size={14} />,
+  revision: <RefreshCw size={14} />,
+  bars: <BarChart3 size={14} style={{ color: '#22D3EE' }} />,
+  calendar: <Calendar size={14} style={{ color: '#22D3EE' }} />,
+  clock: <Clock size={14} style={{ color: '#22D3EE' }} />,
+  flame: <Flame size={20} style={{ fill: '#0F172A', color: '#FB923C' }} />,
+  plus: <Plus size={14} style={{ color: '#0F172A' }} />,
 };
 
 function MiniRing({ pct, color }: { pct: number; color: string }) {
@@ -74,7 +75,7 @@ export default function DashboardPage() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(sunday);
     d.setDate(sunday.getDate() + i);
-    const dKey = d.toISOString().split('T')[0];
+    const dKey = dateKey(d);
     const daySessions = (data.studySessions || []).filter((s: any) => s.start?.startsWith(dKey));
     const hrs = daySessions.reduce((a: number, s: any) => a + (s.durationSec || 0), 0) / 3600;
     weekDays.push({
@@ -91,7 +92,7 @@ export default function DashboardPage() {
     let total = 0;
     for (let i = 0; i < 7; i++) {
       const d = new Date(lastSunday); d.setDate(lastSunday.getDate() + i);
-      const dKey = d.toISOString().split('T')[0];
+      const dKey = dateKey(d);
       total += (data.studySessions || []).filter((s: any) => s.start?.startsWith(dKey))
         .reduce((a: number, s: any) => a + (s.durationSec || 0), 0) / 3600;
     }
@@ -105,7 +106,7 @@ export default function DashboardPage() {
   for (let i = 13; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dKey = d.toISOString().split('T')[0];
+    const dKey = dateKey(d);
     const hrs = (data.studySessions || []).filter((s: any) => s.start?.startsWith(dKey))
       .reduce((a: number, s: any) => a + (s.durationSec || 0), 0) / 3600;
     const hasScore = (data.dailyScores || []).some((s: any) => s.date === dKey);
@@ -374,6 +375,7 @@ export default function DashboardPage() {
 
       <ScoreModal open={showScore} onClose={() => setShowScore(false)} />
       <MockModal open={showMock} onClose={() => setShowMock(false)} />
+
     </div>
   );
 }

@@ -1,14 +1,14 @@
 'use client';
 import { useApp } from '@/context/AppContext';
+import { BarChart3, TrendingUp, TrendingDown, Target, Zap } from 'lucide-react';
 import { PageHeader, Card, CardHeader, MetricCard, Meter, Empty } from '@/components/ui';
 import { getPrediction, getPct } from '@/lib/utils';
-import { EXAM_CONFIG, NET_WEIGHTS, GATE_WEIGHTS } from '@/lib/constants';
+import { useExamConfig } from '@/lib/useExamConfig';
 
 export default function PredictPage() {
   const { data, examType } = useApp();
-  const cfg = EXAM_CONFIG[examType];
-  const weights = examType === 'GATE' ? GATE_WEIGHTS : NET_WEIGHTS;
-  const pred = getPrediction(data, examType);
+  const { config: cfg } = useExamConfig(examType);
+  const pred = getPrediction(data, cfg.weights);
   const scores = data.dailyScores || [];
   const mocks = data.mockTests || [];
   const recent = scores.slice(-7);
@@ -41,7 +41,7 @@ export default function PredictPage() {
           <CardHeader title="Score projection" />
           {pred.noData ? (
             <div className="text-center py-8">
-              <div className="text-4xl mb-3">📊</div>
+              <div className="flex justify-center mb-3"><BarChart3 size={40} strokeWidth={1.5} style={{ color: 'var(--muted)' }} /></div>
               <div className="font-semibold text-[15px] mb-1" style={{ color: 'var(--text)' }}>No scores logged yet</div>
               <div className="text-[13px]" style={{ color: 'var(--muted)' }}>Go to <strong>Score Log</strong> and start logging to see predictions.</div>
             </div>
@@ -72,18 +72,18 @@ export default function PredictPage() {
           ) : (
             <div className="flex flex-col gap-2.5">
               {[
-                ['Exam type', cfg.label],
-                ['Trend', improving ? '📈 Improving' : '📉 Declining'],
-                ['Sessions logged', String(scores.length)],
-                ['Best score', `${Math.max(...scores.map(s => s.score))}%`],
-                ['7-day avg', `${recent.length ? Math.round(recent.reduce((a, s) => a + s.score, 0) / recent.length) : 0}%`],
-                ['Mock tests', `${mocks.length} taken`],
-                ['PYQ chapters', `${(data.pyqData || []).length} tracked`],
-                ['Revision sessions', `${(data.revisions || []).length} logged`],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between text-[13px]">
-                  <span style={{ color: 'var(--muted)' }}>{k}</span>
-                  <strong style={{ color: 'var(--text)' }}>{v}</strong>
+                { label: 'Exam type', value: cfg.label },
+                { label: 'Trend', value: <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{improving ? <TrendingUp size={14} color="#4ADE80" /> : <TrendingDown size={14} color="#F87171" />}{improving ? 'Improving' : 'Declining'}</span> },
+                { label: 'Sessions logged', value: String(scores.length) },
+                { label: 'Best score', value: `${Math.max(...scores.map(s => s.score))}%` },
+                { label: '7-day avg', value: `${recent.length ? Math.round(recent.reduce((a, s) => a + s.score, 0) / recent.length) : 0}%` },
+                { label: 'Mock tests', value: `${mocks.length} taken` },
+                { label: 'PYQ chapters', value: `${(data.pyqData || []).length} tracked` },
+                { label: 'Revision sessions', value: `${(data.revisions || []).length} logged` },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex justify-between text-[13px]">
+                  <span style={{ color: 'var(--muted)' }}>{label}</span>
+                  <strong style={{ color: 'var(--text)' }}>{value}</strong>
                 </div>
               ))}
             </div>
@@ -94,13 +94,13 @@ export default function PredictPage() {
       {!pred.noData && pred.advice.length > 0 && (
         <div className="border-l-4 border-solid" style={{ borderLeftColor: cfg.color }}>
           <Card>
-            <CardHeader title={`🎯 Focus recommendation — highest impact ${examType === 'NET' ? 'topics' : 'subjects'}`} />
+            <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Target size={14} style={{ color: cfg.color }} /> Focus recommendation — highest impact {examType === 'NET' ? 'topics' : 'subjects'}</span>} />
             <div className="text-[13px]" style={{ color: 'var(--muted)' }}>
               Based on {cfg.label} weightages, prioritise these to boost your score:
               <div className="mt-3 flex flex-col gap-2">
                 {pred.advice.map((a, i) => (
                   <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-btn" style={{ background: 'var(--surface2)' }}>
-                    <span style={{ color: cfg.color }}>⚡</span>
+                    <span style={{ color: cfg.color }}><Zap size={14} /></span>
                     <span className="font-medium" style={{ color: 'var(--text)' }}>{a}</span>
                   </div>
                 ))}

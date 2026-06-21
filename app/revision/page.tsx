@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { AlertTriangle, RefreshCw, Check, Trash2 } from 'lucide-react';
 import { PageHeader, Card, CardHeader, MetricCard, Empty, Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { REVISION_INTERVALS } from '@/lib/constants';
 
@@ -61,9 +62,9 @@ export default function RevisionPage() {
           {r.notes && <div className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>{r.notes}</div>}
         </div>
         <span className={`badge ${badgeClass}`}>{badgeText}</span>
-        <button className="btn btn-sm btn-green" onClick={() => { markRevised(idx); showToast('Marked as revised ✓'); }}>✓ Revised</button>
-        <button className="btn btn-sm" style={{ color: 'var(--danger)' }}
-          onClick={() => { if (confirm('Remove this revision?')) deleteRevision(idx); }}>✕</button>
+        <button className="btn btn-sm btn-green" onClick={() => { markRevised(idx); showToast('Marked as revised'); }}><Check size={12} /> Revised</button>
+        <button className="btn btn-sm flex items-center gap-1" style={{ color: 'var(--danger)' }}
+          onClick={() => { if (confirm('Remove this revision?')) deleteRevision(idx); }}><Trash2 size={12} /></button>
       </div>
     );
   }
@@ -83,7 +84,7 @@ export default function RevisionPage() {
 
       {due.length > 0 && (
         <Card className="mb-3 border-l-4 border-danger">
-          <CardHeader title={`⚠ Due for revision NOW (${due.length})`} />
+          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={14} color="var(--danger)" /> Due for revision NOW ({due.length})</span>} />
           {due.map(r => {
             const realIdx = revs.indexOf(r);
             return <RevCard key={realIdx} r={r} idx={realIdx} />;
@@ -100,7 +101,7 @@ export default function RevisionPage() {
         })}
       </Card>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="🔄 Log Revision">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><RefreshCw size={16} /> Log Revision</span>}>
         <FormGroup label="Topic">
           <input className="form-input" type="text" placeholder="e.g. Deadlock in OS" value={topic}
             onChange={e => setTopic(e.target.value)} />

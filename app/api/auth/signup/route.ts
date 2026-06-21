@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUsersCollection } from '@/lib/db';
+import { getUsersCollection, connectDB } from '@/lib/db';
 import { hashPassword, generateVerificationCode } from '@/lib/auth';
 import { sendVerificationEmail } from '@/lib/email';
+import { ExamConfig } from '@/models/ExamConfig';
+import { checkRateLimit } from '@/lib/rateLimit';
+
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,7 +15,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
     }
 
-    if (!['GATE', 'NET'].includes(examType)) {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`signup:${ip}`, 3, 60 * 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many signup attempts from this IP. Try again later.' }, { status: 429 });
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters with uppercase, lowercase, and a number' }, { status: 400 });
+    }
+
+    // Validate against the real ExamConfig collection — not a hardcoded
+    // list — so newly seeded exams (e.g. GOVT) work without a code change.
+    await connectDB();
+    const validExam = await ExamConfig.findOne({ examId: examType, active: true }).lean();
+    if (!validExam) {
       return NextResponse.json({ error: 'Invalid exam type' }, { status: 400 });
     }
 

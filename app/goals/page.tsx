@@ -1,12 +1,16 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Modal, ModalActions, FormGroup, showToast, Empty } from '@/components/ui';
 import { Goal } from '@/lib/types';
-import { EXAM_CONFIG } from '@/lib/constants';
+import { useExamConfig } from '@/lib/useExamConfig';
+import { ChevronLeft, ChevronRight, Plus, Check, Trash2, Flag, X, Calendar, Lock, Target, ClipboardList } from 'lucide-react';
 
-function todayKey() { return new Date().toISOString().split('T')[0]; }
-function toKey(d: Date) { return d.toISOString().split('T')[0]; }
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function todayKey() { return dateKey(new Date()); }
+function toKey(d: Date) { return dateKey(d); }
 
 const TAG_COLORS: Record<string, { color: string; bg: string }> = {
   CS: { color: '#22D3EE', bg: 'rgba(34,211,238,0.15)' },
@@ -23,21 +27,40 @@ const TAG_COLORS: Record<string, { color: string; bg: string }> = {
 };
 
 const I = {
-  chevLeft: <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  chevRight: <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  plus: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>,
-  check: <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M20 6 9 17l-5-5" stroke="#0F172A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  flag: <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M4 21V4a1 1 0 0 1 1-1h11l-2 5 2 5H6a1 1 0 0 0-1 1v7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  close: <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
-  calendar: <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  chevLeft: <ChevronLeft size={18} />,
+  chevRight: <ChevronRight size={18} />,
+  plus: <Plus size={14} />,
+  check: <Check size={11} strokeWidth={3} style={{ color: '#0F172A' }} />,
+  trash: <Trash2 size={13} />,
+  flag: <Flag size={11} />,
+  close: <X size={18} />,
+  calendar: <Calendar size={16} />,
 };
 
 export default function GoalsCalendarPage() {
   const { data, addGoal, toggleGoal, deleteGoal, examType } = useApp();
   const goals: Goal[] = data.goals || [];
-  const cfg = EXAM_CONFIG[examType];
+  const { config: cfg } = useExamConfig(examType);
   const goalTags = cfg.goalTags;
+  const carryoverDone = useRef(false);
+
+  // ── Auto-carryover: incomplete goals from past dates move to today ────
+  useEffect(() => {
+    if (carryoverDone.current || goals.length === 0) return;
+    const today = todayKey();
+    const existingTodayTexts = new Set(goals.filter(g => g.date === today).map(g => g.text));
+    let carried = 0;
+    goals.forEach(g => {
+      if (g.done || g.date >= today || g.endDate) return;
+      if (existingTodayTexts.has(g.text)) return;
+      addGoal({ text: g.text, tag: g.tag, done: false, date: today });
+      existingTodayTexts.add(g.text);
+      carried++;
+    });
+    if (carried > 0) showToast(`${carried} goal${carried > 1 ? 's' : ''} carried over to today`);
+    carryoverDone.current = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goals.length]);
 
   const [viewMonth, setViewMonth] = useState(() => {
     const d = new Date();
@@ -129,6 +152,7 @@ export default function GoalsCalendarPage() {
 
   async function handleSave() {
     if (!selectedDate) return;
+    if (selectedDate < todayKey()) return showToast('Cannot add goals to a past date');
     if (!goalText.trim()) return showToast('Enter a goal description');
     if (isRanged && endDate && endDate < selectedDate) return showToast('End date must be after start date');
     await addGoal({
@@ -289,8 +313,8 @@ export default function GoalsCalendarPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
                   {isToday && (
                     <span style={{
-                      fontSize: 10, fontWeight: 700, color: '#22D3EE', background: 'rgba(34,211,238,0.12)',
-                      padding: '2px 9px', borderRadius: 99, border: '1px solid rgba(34,211,238,0.3)',
+                    fontSize: 10, fontWeight: 700, color: '#22D3EE', background: 'rgba(34,211,238,0.12)',
+                    padding: '2px 9px', borderRadius: 99, border: '1px solid rgba(34,211,238,0.3)',
                     }}>Today</span>
                   )}
                   {selectedGoals.length > 0 && (
@@ -305,12 +329,21 @@ export default function GoalsCalendarPage() {
               }}>{I.close}</button>
             </div>
 
-            {/* Add goal button */}
-            <button
-              onClick={openAddModal}
-              className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 6, margin: '14px 0' }}
-            >{I.plus} Add goal for this day</button>
+            {/* Add goal button — disabled for past dates */}
+            {selectedDate && selectedDate >= todayK ? (
+              <button
+                onClick={openAddModal}
+                className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 6, margin: '14px 0' }}
+              >{I.plus} Add goal for this day</button>
+            ) : selectedDate && selectedDate < todayK ? (
+              <div style={{
+                width: '100%', textAlign: 'center', padding: '10px 0', margin: '14px 0',
+                fontSize: 12, color: 'var(--muted)',
+                background: 'rgba(255,255,255,0.03)', borderRadius: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}><Lock size={12} /> Past date — cannot add new goals</div>
+            ) : null}
 
             {/* Goals list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -387,7 +420,7 @@ export default function GoalsCalendarPage() {
       )}
 
       {/* ADD GOAL MODAL */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={selectedDate ? `🎯 Goal for ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : '🎯 Add Goal'}>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Target size={16} /> {selectedDate ? `Goal for ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'Add Goal'}</span>}>
         <FormGroup label="What's the goal?">
           <input className="form-input" placeholder="e.g. Finish Discrete Maths chapter 3"
             value={goalText} onChange={e => setGoalText(e.target.value)}
@@ -406,7 +439,7 @@ export default function GoalsCalendarPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isRanged ? '#22D3EE' : 'transparent',
             border: isRanged ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
-          }}>{isRanged && <svg viewBox="0 0 24 24" width="11" height="11"><path d="M20 6 9 17l-5-5" stroke="#0F172A" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}</div>
+          }}>{isRanged && <Check size={11} strokeWidth={3} style={{ color: '#0F172A' }} />}</div>
           <span style={{ fontSize: 12, color: '#E5E7EB' }}>This goal has a deadline (multi-day target)</span>
         </div>
 

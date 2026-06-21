@@ -7,7 +7,7 @@ import { clsx } from 'clsx';
 interface ModalProps {
   open: boolean;
   onClose: () => void;
-  title: string;
+  title: ReactNode;
   children: ReactNode;
 }
 
@@ -97,7 +97,7 @@ export function Empty({ children }: { children: ReactNode }) {
 
 // ── Page Header ──────────────────────────────────────────────
 
-export function PageHeader({ title, sub, children }: { title: string; sub?: string; children?: ReactNode }) {
+export function PageHeader({ title, sub, children }: { title: ReactNode; sub?: string; children?: ReactNode }) {
   return (
     <div className="flex justify-between items-start mb-6 flex-wrap gap-2.5">
       <div>
@@ -115,7 +115,7 @@ export function Card({ children, className }: { children: ReactNode; className?:
   return <div className={clsx('card', className)}>{children}</div>;
 }
 
-export function CardHeader({ title, children }: { title: string; children?: ReactNode }) {
+export function CardHeader({ title, children }: { title: ReactNode; children?: ReactNode }) {
   return (
     <div className="flex justify-between items-center mb-3.5">
       <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>{title}</span>

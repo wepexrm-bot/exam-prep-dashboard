@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { AppData } from '@/models/AppData';
 import { requireAuth } from '@/lib/auth';
-import { EXAM_CONFIG } from '@/lib/constants';
+import { ExamConfig } from '@/models/ExamConfig';
 
 export async function GET(req: NextRequest) {
   const auth = requireAuth(req);
@@ -22,8 +22,11 @@ export async function GET(req: NextRequest) {
   }
 
   if (!doc) {
-    // Brand new user — create fresh AppData with default subjects for their exam type
-    const defaultSubjects = (EXAM_CONFIG[auth.examType]?.subjects || []).map((name: string) => ({
+    // Brand new user — create fresh AppData with default subjects pulled
+    // live from the ExamConfig collection (works for GATE, NET, GOVT, and
+    // any future exam added via the seed script — no code change needed).
+    const examCfg = await ExamConfig.findOne({ examId: auth.examType, active: true }).lean() as { subjects?: string[] } | null;
+    const defaultSubjects = (examCfg?.subjects || []).map((name: string) => ({
       name, pct: 0, completed: false, chapters: [],
     }));
     doc = await AppData.create({

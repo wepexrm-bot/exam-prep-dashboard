@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const session = await req.json(); // { start, end, durationSec }
 
   await AppData.updateOne(
-    { username: auth.name },
+    { userId: auth.userId },
     { $push: { studySessions: session }, $set: { lastUpdated: new Date() } }
   );
   return NextResponse.json({ ok: true });
@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
-  const doc = await AppData.findOne({ username: auth.name }, 'studySessions').lean() as { studySessions?: unknown[] } | null;
+  let doc = await AppData.findOne({ userId: auth.userId }, 'studySessions').lean() as { studySessions?: unknown[] } | null;
+  if (!doc) doc = await AppData.findOne({ username: auth.name }, 'studySessions').lean() as { studySessions?: unknown[] } | null;
   return NextResponse.json(doc?.studySessions || []);
 }

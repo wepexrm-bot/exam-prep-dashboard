@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { Plus, Book, Check, Pencil, Trash2, ChevronDown } from 'lucide-react';
 import { PageHeader, Card, MetricCard, Empty, Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { SUB_COLORS } from '@/lib/constants';
 import { getPct } from '@/lib/utils';
@@ -25,7 +26,7 @@ export default function SubjectsPage() {
     if (!name) return showToast('Enter a subject name');
     if (subjects.find(s => s.name.toLowerCase() === name.toLowerCase())) return showToast('Subject already exists');
     await addSubject(name);
-    showToast(`"${name}" added ✓`);
+    showToast(`"${name}" added`);
     setNewSubjName('');
     setShowAddSubj(false);
   }
@@ -35,7 +36,7 @@ export default function SubjectsPage() {
     const name = newChName.trim();
     if (!name) return showToast('Enter a chapter name');
     await addChapter(showAddCh, name);
-    showToast('Chapter added ✓');
+    showToast('Chapter added ');
     setNewChName('');
     setShowAddCh(null);
   }
@@ -45,13 +46,13 @@ export default function SubjectsPage() {
     const newName = prompt('Rename chapter:', oldName);
     if (!newName || newName.trim() === oldName) return;
     await renameChapter(si, ci, newName.trim());
-    showToast('Chapter renamed ✓');
+    showToast('Chapter renamed ');
   }
 
   return (
     <>
       <PageHeader title="Subject Progress" sub="Tick chapters to auto-update completion %">
-        <button className="btn btn-primary" onClick={() => setShowAddSubj(true)}>+ Add subject</button>
+        <button className="btn btn-primary" onClick={() => setShowAddSubj(true)}><Plus size={14} /> Add subject</button>
       </PageHeader>
 
       {/* Metrics */}
@@ -64,10 +65,10 @@ export default function SubjectsPage() {
 
       {subjects.length === 0 && (
         <Card className="text-center py-10">
-          <div className="text-4xl mb-3">📚</div>
+          <div className="flex justify-center mb-3"><Book size={40} strokeWidth={1.5} style={{ color: 'var(--muted)' }} /></div>
           <div className="font-semibold text-[15px] mb-1" style={{ color: 'var(--text)' }}>No subjects yet</div>
           <div className="text-[13px] mb-5" style={{ color: 'var(--muted)' }}>Add your GATE subjects to start tracking chapter completion</div>
-          <button className="btn btn-primary" onClick={() => setShowAddSubj(true)}>+ Add your first subject</button>
+          <button className="btn btn-primary" onClick={() => setShowAddSubj(true)}><Plus size={14} /> Add your first subject</button>
         </Card>
       )}
 
@@ -96,11 +97,11 @@ export default function SubjectsPage() {
                 <span className="text-xs font-semibold w-9 text-right" style={{ color }}>{pct}%</span>
                 <button
                   onClick={e => { e.stopPropagation(); if (confirm(`Delete "${subj.name}"? Also removes chapters and PYQ data.`)) deleteSubject(si); }}
-                  className="text-[11px] px-2 py-0.5 rounded-sm border transition-all"
+                  className="text-[11px] px-2 py-0.5 rounded-sm border transition-all flex items-center gap-1"
                   style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ✕ Delete
+                  <Trash2 size={11} /> Delete
                 </button>
-                <span className="text-xs transition-transform duration-200 inline-block" style={{ color: 'var(--muted)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
+                <span className="text-xs transition-transform duration-200 inline-block" style={{ color: 'var(--muted)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}><ChevronDown size={14} /></span>
               </div>
             </div>
 
@@ -111,7 +112,7 @@ export default function SubjectsPage() {
                   <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
                     Chapters ({doneC}/{subj.chapters.length} done)
                   </span>
-                  <button className="btn btn-sm btn-primary" onClick={() => { setShowAddCh(si); setNewChName(''); }}>+ Add chapter</button>
+                          <button className="btn btn-sm btn-primary" onClick={() => { setShowAddCh(si); setNewChName(''); }}><Plus size={12} /> Add chapter</button>
                 </div>
                 {subj.chapters.length === 0 && <Empty>No chapters yet — add your first one above</Empty>}
                 <div className="flex flex-col gap-0.5">
@@ -122,7 +123,7 @@ export default function SubjectsPage() {
                         onClick={() => toggleChapter(si, ci)}
                         className="w-4.5 h-4.5 rounded flex-shrink-0 flex items-center justify-center text-[10px] text-white transition-all cursor-pointer"
                         style={{ border: ch.done ? 'none' : '1.5px solid var(--border)', background: ch.done ? '#16A34A' : 'transparent' }}>
-                        {ch.done ? '✓' : ''}
+                        {ch.done && <Check size={10} strokeWidth={3} style={{ color: '#0F172A' }} />}
                       </div>
                       <span
                         onClick={() => toggleChapter(si, ci)}
@@ -132,15 +133,15 @@ export default function SubjectsPage() {
                       </span>
                       <button
                         onClick={() => handleRenameCh(si, ci)}
-                        className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border transition-all"
+                        className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border transition-all flex items-center gap-1"
                         style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        ✎ Rename
+                        <Pencil size={10} /> Rename
                       </button>
                       <button
                         onClick={() => { if (confirm('Remove chapter?')) deleteChapter(si, ci); }}
-                        className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border transition-all"
+                        className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border transition-all flex items-center gap-1"
                         style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        ✕
+                        <Trash2 size={10} />
                       </button>
                     </div>
                   ))}
@@ -152,7 +153,7 @@ export default function SubjectsPage() {
       })}
 
       {/* Add Subject Modal */}
-      <Modal open={showAddSubj} onClose={() => setShowAddSubj(false)} title="📚 Add Subject">
+      <Modal open={showAddSubj} onClose={() => setShowAddSubj(false)} title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Book size={16} /> Add Subject</span>}>
         <FormGroup label="Subject name">
           <input className="form-input" type="text" placeholder="e.g. Operating Systems" value={newSubjName}
             onChange={e => setNewSubjName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddSubject()} />

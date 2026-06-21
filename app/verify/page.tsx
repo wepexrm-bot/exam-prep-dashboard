@@ -1,4 +1,5 @@
 'use client';
+import { Mail, Check } from 'lucide-react';
 import { useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -87,9 +88,9 @@ function VerifyForm() {
       <div style={{
         width: 56, height: 56, borderRadius: 16, marginBottom: 16,
         background: 'linear-gradient(135deg, #22D3EE, #3B82F6)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: '0 0 24px rgba(34,211,238,0.4)',
-      }}>✉️</div>
+      }}><Mail size={28} style={{ color: '#0F172A' }} /></div>
 
       <h1 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: 0, textAlign: 'center' }}>
         Check your inbox
@@ -140,7 +141,7 @@ function VerifyForm() {
           boxShadow: '0 0 20px rgba(34,211,238,0.3)',
           opacity: loading ? 0.6 : 1,
         }}
-      >{loading ? 'Verifying...' : 'Verify account ✓'}</button>
+      >{loading ? 'Verifying...' : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Verify account <Check size={14} /></span>}</button>
 
       <button
         onClick={handleResend}
@@ -149,7 +150,7 @@ function VerifyForm() {
           marginTop: 16, background: 'none', border: 'none',
           color: resent ? '#4ADE80' : '#64748B', fontSize: 12, cursor: 'pointer',
         }}
-      >{resent ? '✓ Code resent!' : resending ? 'Sending...' : "Didn't get a code? Resend"}</button>
+        >{resent ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Check size={12} /> Code resent!</span> : resending ? 'Sending...' : "Didn't get a code? Resend"}</button>
     </div>
   );
 }

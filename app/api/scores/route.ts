@@ -11,7 +11,8 @@ export async function POST(req: NextRequest) {
   await connectDB();
   const entry = await req.json(); // { date, score, accuracy, hours }
 
-  const doc = await AppData.findOne({ username: auth.name });
+  let doc = await AppData.findOne({ userId: auth.userId });
+  if (!doc) doc = await AppData.findOne({ username: auth.name });
   if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const idx = doc.dailyScores.findIndex((s: { date: string }) => s.date === entry.date);
@@ -34,7 +35,7 @@ export async function DELETE(req: NextRequest) {
   const date = req.nextUrl.searchParams.get('date');
 
   await AppData.updateOne(
-    { username: auth.name },
+    { userId: auth.userId },
     { $pull: { dailyScores: { date } }, $set: { lastUpdated: new Date() } }
   );
   return NextResponse.json({ ok: true });

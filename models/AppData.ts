@@ -16,7 +16,7 @@ const SubjectSchema = new Schema(
 );
 
 const GoalSchema = new Schema(
-  { id: Number, text: String, tag: String, done: { type: Boolean, default: false } },
+  { id: Number, text: String, tag: String, done: { type: Boolean, default: false }, date: String, endDate: String },
   { _id: false }
 );
 

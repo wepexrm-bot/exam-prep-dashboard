@@ -1,4 +1,5 @@
 'use client';
+import { Repeat, Flame, Calendar, PartyPopper, Flag } from 'lucide-react';
 import { useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 
@@ -11,13 +12,16 @@ declare global {
           checkPermissions: () => Promise<{ display: string }>;
           requestPermissions: () => Promise<{ display: string }>;
           cancel: (opts: { notifications: { id: number }[] }) => Promise<void>;
-          schedule: (opts: { notifications: any[] }) => Promise<void>;
-          getPending: () => Promise<{ notifications: any[] }>;
+          schedule: (opts: { notifications: Record<string, unknown>[] }) => Promise<void>;
+          getPending: () => Promise<{ notifications: Record<string, unknown>[] }>;
         };
       };
     };
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NotificationItem = Record<string, any>;
 
 const NOTIF_IDS = {
   REVISION: 1001,
@@ -26,7 +30,16 @@ const NOTIF_IDS = {
   GOAL_DEADLINE: 1004,
 };
 
-function todayKey() { return new Date().toISOString().split('T')[0]; }
+function dateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function todayLocal(): string {
+  return dateKey(new Date());
+}
 
 export function NotificationManager() {
   const { data } = useApp();
@@ -56,10 +69,9 @@ export function NotificationManager() {
           notifications: Object.values(NOTIF_IDS).map(id => ({ id })),
         });
 
-        const notifications: any[] = [];
-        const today = todayKey();
+        const notifications: NotificationItem[] = [];
+        const today = todayLocal();
 
-        // ── 1. Revision reminder — 9:00 AM if revisions are due
         const revDue = (data.revisions || []).filter(r => {
           const next = new Date(r.lastRevised);
           next.setDate(next.getDate() + r.intervalDays);
@@ -69,13 +81,12 @@ export function NotificationManager() {
         if (revDue > 0) {
           notifications.push({
             id: NOTIF_IDS.REVISION,
-            title: '🔁 Revision due',
-            body: `${revDue} topic${revDue > 1 ? 's' : ''} need review today. Don't lose your edge!`,
+            title: 'Revision due',
+            body: `${revDue} topic${revDue > 1 ? 's' : ''} need review today.`,
             schedule: { on: { hour: 9, minute: 0 }, repeats: true },
           });
         }
 
-        // ── 2. Streak reminder — 3:00 PM if no activity logged today
         const hasScoreToday = (data.dailyScores || []).some(s => s.date === today);
         const hasStudyToday = (data.studySessions || []).some(s => s.start?.startsWith(today));
         const hasPYQToday = (data.pyqData || []).some(p =>
@@ -90,13 +101,12 @@ export function NotificationManager() {
         if (!activeToday) {
           notifications.push({
             id: NOTIF_IDS.STREAK,
-            title: '🔥 Keep your streak alive!',
-            body: "You haven't logged any activity today. Even 30 minutes counts!",
+            title: 'Keep your streak alive!',
+            body: "You haven't logged any activity today.",
             schedule: { on: { hour: 15, minute: 0 }, repeats: true },
           });
         }
 
-        // ── 3. Weekly target check-in — Sunday 6:00 PM
         const now = new Date();
         const monday = new Date(now);
         monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -109,18 +119,16 @@ export function NotificationManager() {
 
         notifications.push({
           id: NOTIF_IDS.WEEKLY,
-          title: '📅 Weekly target check-in',
+          title: 'Weekly target check-in',
           body: weekPct >= 100
-            ? `🎉 You hit ${weekPct}% of your weekly target! Keep it up.`
-            : `You're at ${weekPct}% of your weekly study target. Push for the finish!`,
+            ? `You hit ${weekPct}% of your weekly target!`
+            : `You're at ${weekPct}% of your weekly study target.`,
           schedule: { on: { weekday: 1, hour: 18, minute: 0 }, repeats: true },
         });
 
-        // ── 4. Goal deadline reminder — one-time, fires tomorrow at 8:00 AM
-        // if any ranged goal's endDate is tomorrow and it's not done yet
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowKey = tomorrow.toISOString().split('T')[0];
+        const tomorrowKey = dateKey(tomorrow);
 
         const upcomingDeadlines = (data.goals || []).filter(g =>
           g.endDate && g.endDate === tomorrowKey && !g.done
@@ -130,14 +138,13 @@ export function NotificationManager() {
           const firstGoal = upcomingDeadlines[0];
           const extra = upcomingDeadlines.length > 1 ? ` (+${upcomingDeadlines.length - 1} more)` : '';
 
-          // Fire at 8:00 AM tomorrow — the actual deadline day
           const fireAt = new Date(tomorrow);
           fireAt.setHours(8, 0, 0, 0);
 
           notifications.push({
             id: NOTIF_IDS.GOAL_DEADLINE,
-            title: '🚩 Goal due today',
-            body: `"${firstGoal.text}"${extra} is due today. Make it count!`,
+            title: 'Goal due today',
+            body: `"${firstGoal.text}"${extra} is due today.`,
             schedule: { at: fireAt },
           });
         }

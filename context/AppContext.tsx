@@ -1,13 +1,12 @@
 'use client';
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { AppData, DailyScore, Goal, MockTest, PYQChapter, Revision, StudySession, Subject } from '@/lib/types';
-import { EXAM_CONFIG } from '@/lib/constants';
-import { ExamType } from '@/models/User';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { AppData, DailyScore, Goal, MockTest, PYQChapter, PYQSession, Revision, StudySession, Subject } from '@/lib/types';
+import { useExamConfig } from '@/lib/useExamConfig';
 
 interface AppContextType {
   data: AppData;
   loading: boolean;
-  examType: ExamType;
+  examType: string;
   username: string;
   loadData: () => Promise<void>;
   syncToServer: (patch?: Partial<AppData>) => Promise<void>;
@@ -36,8 +35,6 @@ interface AppContextType {
   setWeeklyTarget: (n: number) => Promise<void>;
 }
 
-type PYQSession = { attempted: number; correct: number; accuracy: number; date: string };
-
 const AppContext = createContext<AppContextType | null>(null);
 
 export function useApp() {
@@ -46,32 +43,60 @@ export function useApp() {
   return ctx;
 }
 
+function dateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function todayLocal(): string {
+  return dateKey(new Date());
+}
+
+function showErrorToast(msg: string) {
+  if (typeof document === 'undefined') return;
+  const el = document.getElementById('__toast__');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateY(0)';
+  el.style.background = '#F87171';
+  el.style.color = '#fff';
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(6px)';
+  }, 3500);
+}
+
 async function apiCall(method: string, url: string, body?: unknown) {
   const r = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!r.ok) throw new Error(`API error ${r.status}`);
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error(data.error || `API error ${r.status}`);
+  }
   return r.json();
 }
 
-function today() { return new Date().toISOString().split('T')[0]; }
-
 export function AppProvider({
   children,
-  examType: examTypeProp,
+  examType,
   username: usernameProp,
 }: {
   children: React.ReactNode;
-  examType: ExamType;
+  examType: string;
   username?: string;
 }) {
-  const examType: ExamType = (examTypeProp && (examTypeProp === "GATE" || examTypeProp === "NET")) ? examTypeProp : "GATE";
   const username = usernameProp || '';
-  const defaultSubjects = EXAM_CONFIG[examType].subjects.map(name => ({
-    name, pct: 0, completed: false, chapters: [],
-  }));
+  const { config: examCfg } = useExamConfig(examType);
+  const defaultSubjects = useMemo(
+    () => (examCfg.subjects || []).map(name => ({ name, pct: 0, completed: false, chapters: [] })),
+    [examCfg]
+  );
 
   const defaultData: AppData = {
     goals: [],
@@ -86,13 +111,37 @@ export function AppProvider({
 
   const [data, setData] = useState<AppData>(defaultData);
   const [loading, setLoading] = useState(true);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  // ── Debounced sync to server ──────────────────────────────────
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncVersionRef = useRef(0);
+
+  useEffect(() => {
+    if (loading) return;
+    syncVersionRef.current++;
+    const version = syncVersionRef.current;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(async () => {
+      if (version !== syncVersionRef.current) return;
+      try {
+        await apiCall('POST', '/api/data', dataRef.current);
+      } catch {
+        showErrorToast('Failed to save data to server');
+      }
+    }, 600);
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, [data, loading]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const d = await apiCall('GET', '/api/data');
       setData({
-        goals: (d.goals || []).map((g: any) => ({ ...g, date: g.date || today() })),
+        goals: (d.goals || []).map((g: Goal) => ({ ...g, date: g.date || todayLocal() })),
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
         dailyScores: d.dailyScores || [],
         mockTests: d.mockTests || [],
@@ -102,51 +151,47 @@ export function AppProvider({
         weeklyTarget: d.weeklyTarget || 12,
         lastUpdated: d.lastUpdated,
       });
-    } catch { /* keep default */ }
-    finally { setLoading(false); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    } catch (e) {
+      showErrorToast('Failed to load data from server');
+    } finally { setLoading(false); }
+  }, [defaultSubjects]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const syncToServer = useCallback(async (patch?: Partial<AppData>) => {
-    try { await apiCall('POST', '/api/data', patch || data); }
-    catch { /* silent */ }
-  }, [data]);
+    try { await apiCall('POST', '/api/data', patch || dataRef.current); }
+    catch { showErrorToast('Failed to sync data'); }
+  }, []);
 
-  function update(fn: (prev: AppData) => AppData) {
-    setData(prev => {
-      const next = fn(prev);
-      apiCall('POST', '/api/data', next).catch(() => {});
-      return next;
-    });
+  function mutate(fn: (prev: AppData) => AppData) {
+    setData(fn);
   }
 
   const toggleGoal = useCallback(async (id: number) => {
-    update(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, done: !g.done } : g) }));
+    mutate(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, done: !g.done } : g) }));
   }, []);
 
   const addGoal = useCallback(async (goal: Omit<Goal, 'id'>) => {
-    update(prev => {
+    mutate(prev => {
       const newId = Math.max(0, ...prev.goals.map(g => g.id)) + 1;
       return { ...prev, goals: [...prev.goals, { ...goal, id: newId }] };
     });
   }, []);
 
   const updateGoal = useCallback(async (id: number, patch: Partial<Omit<Goal, 'id'>>) => {
-    update(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, ...patch } : g) }));
+    mutate(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, ...patch } : g) }));
   }, []);
 
   const deleteGoal = useCallback(async (id: number) => {
-    update(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) }));
+    mutate(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) }));
   }, []);
 
   const clearDoneGoals = useCallback(async () => {
-    update(prev => ({ ...prev, goals: prev.goals.filter(g => !g.done) }));
+    mutate(prev => ({ ...prev, goals: prev.goals.filter(g => !g.done) }));
   }, []);
 
   const clearAllGoals = useCallback(async () => {
-    update(prev => ({ ...prev, goals: [] }));
+    mutate(prev => ({ ...prev, goals: [] }));
   }, []);
 
   const addScore = useCallback(async (score: DailyScore) => {
@@ -156,7 +201,7 @@ export function AppProvider({
         ? prev.dailyScores.map((s, i) => i === idx ? score : s)
         : [...prev.dailyScores, score];
       const next = { ...prev, dailyScores: scores };
-      apiCall('POST', '/api/scores', score).catch(() => {});
+      apiCall('POST', '/api/scores', score).catch(() => showErrorToast('Failed to save score'));
       return next;
     });
   }, []);
@@ -164,21 +209,21 @@ export function AppProvider({
   const deleteScore = useCallback(async (date: string) => {
     setData(prev => {
       const next = { ...prev, dailyScores: prev.dailyScores.filter(s => s.date !== date) };
-      apiCall('DELETE', `/api/scores?date=${date}`).catch(() => {});
+      apiCall('DELETE', `/api/scores?date=${date}`).catch(() => showErrorToast('Failed to delete score'));
       return next;
     });
   }, []);
 
   const addMock = useCallback(async (mock: MockTest) => {
-    update(prev => ({ ...prev, mockTests: [...prev.mockTests, mock] }));
+    mutate(prev => ({ ...prev, mockTests: [...prev.mockTests, mock] }));
   }, []);
 
   const deleteMock = useCallback(async (idx: number) => {
-    update(prev => ({ ...prev, mockTests: prev.mockTests.filter((_, i) => i !== idx) }));
+    mutate(prev => ({ ...prev, mockTests: prev.mockTests.filter((_, i) => i !== idx) }));
   }, []);
 
   const addPYQSession = useCallback(async (key: string, total: number, session: PYQSession) => {
-    update(prev => {
+    mutate(prev => {
       const existing = prev.pyqData.find(p => p.key === key);
       const pyqData: PYQChapter[] = existing
         ? prev.pyqData.map(p => p.key === key ? { ...p, total, sessions: [...p.sessions, session] } : p)
@@ -188,7 +233,7 @@ export function AppProvider({
   }, []);
 
   const deletePYQSession = useCallback(async (key: string, idx: number) => {
-    update(prev => ({
+    mutate(prev => ({
       ...prev,
       pyqData: prev.pyqData.map(p => p.key === key
         ? { ...p, sessions: p.sessions.filter((_, i) => i !== idx) } : p),
@@ -196,26 +241,26 @@ export function AppProvider({
   }, []);
 
   const addRevision = useCallback(async (rev: Omit<Revision, 'lastRevised'>) => {
-    update(prev => ({ ...prev, revisions: [...prev.revisions, { ...rev, lastRevised: today() }] }));
+    mutate(prev => ({ ...prev, revisions: [...prev.revisions, { ...rev, lastRevised: todayLocal() }] }));
   }, []);
 
   const markRevised = useCallback(async (idx: number) => {
-    update(prev => ({
+    mutate(prev => ({
       ...prev,
-      revisions: prev.revisions.map((r, i) => i === idx ? { ...r, lastRevised: today() } : r),
+      revisions: prev.revisions.map((r, i) => i === idx ? { ...r, lastRevised: todayLocal() } : r),
     }));
   }, []);
 
   const deleteRevision = useCallback(async (idx: number) => {
-    update(prev => ({ ...prev, revisions: prev.revisions.filter((_, i) => i !== idx) }));
+    mutate(prev => ({ ...prev, revisions: prev.revisions.filter((_, i) => i !== idx) }));
   }, []);
 
   const addSubject = useCallback(async (name: string) => {
-    update(prev => ({ ...prev, subjects: [...prev.subjects, { name, pct: 0, completed: false, chapters: [] }] }));
+    mutate(prev => ({ ...prev, subjects: [...prev.subjects, { name, pct: 0, completed: false, chapters: [] }] }));
   }, []);
 
   const deleteSubject = useCallback(async (idx: number) => {
-    update(prev => {
+    mutate(prev => {
       const subj = prev.subjects[idx];
       return {
         ...prev,
@@ -226,7 +271,7 @@ export function AppProvider({
   }, []);
 
   const addChapter = useCallback(async (si: number, name: string) => {
-    update(prev => ({
+    mutate(prev => ({
       ...prev,
       subjects: prev.subjects.map((s, i) =>
         i === si ? { ...s, chapters: [...s.chapters, { name, done: false }] } : s),
@@ -234,7 +279,7 @@ export function AppProvider({
   }, []);
 
   const toggleChapter = useCallback(async (si: number, ci: number) => {
-    update(prev => ({
+    mutate(prev => ({
       ...prev,
       subjects: prev.subjects.map((s, i) => {
         if (i !== si) return s;
@@ -245,7 +290,7 @@ export function AppProvider({
   }, []);
 
   const deleteChapter = useCallback(async (si: number, ci: number) => {
-    update(prev => {
+    mutate(prev => {
       const subj = prev.subjects[si];
       const key = `${subj.name}::${subj.chapters[ci].name}`;
       return {
@@ -261,7 +306,7 @@ export function AppProvider({
   }, []);
 
   const renameChapter = useCallback(async (si: number, ci: number, newName: string) => {
-    update(prev => {
+    mutate(prev => {
       const subj = prev.subjects[si];
       const oldKey = `${subj.name}::${subj.chapters[ci].name}`;
       const newKey = `${subj.name}::${newName}`;
@@ -277,13 +322,13 @@ export function AppProvider({
   const addStudySession = useCallback(async (session: StudySession) => {
     setData(prev => {
       const next = { ...prev, studySessions: [...prev.studySessions, session] };
-      apiCall('POST', '/api/sessions', session).catch(() => {});
+      apiCall('POST', '/api/sessions', session).catch(() => showErrorToast('Failed to save study session'));
       return next;
     });
   }, []);
 
   const setWeeklyTarget = useCallback(async (n: number) => {
-    update(prev => ({ ...prev, weeklyTarget: n }));
+    mutate(prev => ({ ...prev, weeklyTarget: n }));
   }, []);
 
   return (

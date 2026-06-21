@@ -3,14 +3,18 @@ import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const rawSecret = process.env.JWT_SECRET;
+if (!rawSecret) {
+  throw new Error('JWT_SECRET is not set in environment variables');
+}
+const JWT_SECRET: string = rawSecret;
 export const TOKEN_NAME = 'gate_token';
 
 export interface AuthPayload {
   userId: string;
   email: string;
   name: string;
-  examType: 'GATE' | 'NET';
+  examType: string;
 }
 
 export function signToken(payload: AuthPayload): string {
@@ -19,7 +23,7 @@ export function signToken(payload: AuthPayload): string {
 
 export function verifyToken(token: string): AuthPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthPayload;
+    return jwt.verify(token, JWT_SECRET) as unknown as AuthPayload;
   } catch {
     return null;
   }

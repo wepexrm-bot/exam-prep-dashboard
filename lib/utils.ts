@@ -1,9 +1,17 @@
 import { AppData, DailyScore, PYQChapter, Prediction, Subject } from './types';
-import { GATE_WEIGHTS, NET_WEIGHTS } from './constants';
-import { ExamType } from '@/models/User';
+
+// ── Local-date-safe key builder ──────────────────────────────
+// Never use toISOString().split('T')[0] for "today" — it converts to UTC
+// first, which shifts the date by a day depending on timezone/time of day.
+export function dateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 export function today(): string {
-  return new Date().toISOString().split('T')[0];
+  return dateKey(new Date());
 }
 
 export function getDateLabel(): string {
@@ -28,47 +36,40 @@ export function getPct(s: Subject): number {
 }
 
 export function computeStreak(data: AppData): number {
-  // Collect all active dates from every category
   const activeDates = new Set<string>();
 
-  // Daily scores
   (data.dailyScores || []).forEach(s => activeDates.add(s.date));
 
-  // Study timer sessions
+  // Study timer sessions — parse the ISO start time as a local Date, then key it locally
   (data.studySessions || []).forEach(s => {
-    if (s.start) activeDates.add(s.start.split('T')[0]);
+    if (s.start) activeDates.add(dateKey(new Date(s.start)));
   });
 
-  // PYQ sessions
   (data.pyqData || []).forEach(chap => {
     (chap.sessions || []).forEach(s => {
       if (s.date) activeDates.add(s.date);
     });
   });
 
-  // Mock tests
   (data.mockTests || []).forEach(m => {
     if (m.date) activeDates.add(m.date);
   });
 
-  // Revisions (lastRevised date)
   (data.revisions || []).forEach(r => {
     if (r.lastRevised) activeDates.add(r.lastRevised);
   });
 
   if (!activeDates.size) return 0;
 
-  // Count consecutive days ending today or yesterday
   let streak = 0;
   let cur = new Date();
   cur.setHours(0, 0, 0, 0);
-  const todayKey = cur.toISOString().split('T')[0];
+  const todayK = dateKey(cur);
 
-  // If no activity today, start from yesterday
-  if (!activeDates.has(todayKey)) cur.setDate(cur.getDate() - 1);
+  if (!activeDates.has(todayK)) cur.setDate(cur.getDate() - 1);
 
   while (true) {
-    const key = cur.toISOString().split('T')[0];
+    const key = dateKey(cur);
     if (!activeDates.has(key)) break;
     streak++;
     cur.setDate(cur.getDate() - 1);
@@ -77,8 +78,7 @@ export function computeStreak(data: AppData): number {
   return streak;
 }
 
-export function getPrediction(data: AppData, examType: ExamType = 'GATE'): Prediction {
-  const weights = examType === 'GATE' ? GATE_WEIGHTS : NET_WEIGHTS;
+export function getPrediction(data: AppData, weights: Record<string, number> = {}): Prediction {
   const sc = (data.dailyScores || []).slice(-14);
   if (!sc.length) return { score: null, percentile: null, qualify: null, noData: true, advice: [] };
 

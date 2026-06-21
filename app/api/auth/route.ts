@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsersCollection } from '@/lib/db';
 import { comparePassword, signToken, TOKEN_NAME } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // LOGIN
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
+
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many login attempts. Try again in 15 minutes.' }, { status: 429 });
+    }
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }

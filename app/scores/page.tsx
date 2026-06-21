@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { Flame, CheckCircle2, AlertTriangle, XCircle, Trash2 } from 'lucide-react';
 import { PageHeader, Card, CardHeader, Empty, showToast } from '@/components/ui';
 import { ScoreModal } from '@/components/modals/ScoreModal';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -14,10 +15,10 @@ export default function ScoresPage() {
   const chartData = sorted.map(s => ({ date: s.date.slice(5), score: s.score, acc: s.accuracy }));
 
   function rating(score: number) {
-    if (score >= 80) return { label: '🔥 Excellent', color: '#16A34A' };
-    if (score >= 65) return { label: '✅ Good', color: '#2563EB' };
-    if (score >= 50) return { label: '⚠ Average', color: '#D97706' };
-    return { label: '❌ Needs work', color: '#DC2626' };
+    if (score >= 80) return { label: <><Flame size={13} color="#16A34A" /> Excellent</>, color: '#16A34A' };
+    if (score >= 65) return { label: <><CheckCircle2 size={13} color="#2563EB" /> Good</>, color: '#2563EB' };
+    if (score >= 50) return { label: <><AlertTriangle size={13} color="#D97706" /> Average</>, color: '#D97706' };
+    return { label: <><XCircle size={13} color="#DC2626" /> Needs work</>, color: '#DC2626' };
   }
 
   return (
@@ -86,7 +87,7 @@ export default function ScoresPage() {
                             background: 'none', border: '1px solid var(--border)',
                             color: 'var(--muted)', cursor: 'pointer', fontSize: 11,
                             padding: '2px 8px', borderRadius: 4, fontFamily: 'inherit'
-                          }}>✕</button>
+                          }}><Trash2 size={11} /></button>
                       </td>
                     </tr>
                   );
@@ -123,7 +124,7 @@ export default function ScoresPage() {
                     background: 'none', border: '1px solid var(--border)',
                     color: 'var(--muted)', cursor: 'pointer', fontSize: 11,
                     padding: '2px 8px', borderRadius: 4, fontFamily: 'inherit'
-                  }}>✕</button>
+                  }}><Trash2 size={11} /></button>
               </div>
               {/* Stats row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>

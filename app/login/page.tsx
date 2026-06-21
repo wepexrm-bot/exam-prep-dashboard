@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { GraduationCap, Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -46,9 +48,9 @@ export default function LoginPage() {
       <div style={{
         width: 56, height: 56, borderRadius: 16, marginBottom: 16,
         background: 'linear-gradient(135deg, #22D3EE, #3B82F6)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: '0 0 24px rgba(34,211,238,0.4)',
-      }}>🎓</div>
+      }}><GraduationCap size={28} style={{ color: '#0F172A' }} /></div>
 
       <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>Welcome back</h1>
       <p style={{ fontSize: 13, color: '#64748B', marginTop: 4, marginBottom: 24 }}>Log in to continue your prep</p>
@@ -70,14 +72,30 @@ export default function LoginPage() {
         />
 
         <label style={labelStyle}>Password</label>
-        <input
-          type="password"
-          style={inputStyle}
-          placeholder="••••••••"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleLogin()}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            style={{ ...inputStyle, paddingRight: 44 }}
+            placeholder="••••••••"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+          />
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+              width: 32, height: 32, borderRadius: 8,
+              background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+            }}
+          >{showPassword
+            ? <EyeOff size={18} strokeWidth={1.5} />
+            : <Eye size={18} strokeWidth={1.5} />
+          }</button>
+        </div>
 
         {error && (
           <div style={{
@@ -96,7 +114,7 @@ export default function LoginPage() {
             boxShadow: '0 0 20px rgba(34,211,238,0.3)',
             opacity: loading ? 0.6 : 1,
           }}
-        >{loading ? 'Logging in...' : 'Log in →'}</button>
+        >{loading ? 'Logging in...' : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Log in <ArrowRight size={16} /></span>}</button>
       </div>
 
       <p style={{ fontSize: 12, color: '#64748B', marginTop: 20 }}>

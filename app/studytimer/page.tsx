@@ -1,19 +1,20 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
+import { Play, Pause, Square, Clock, BarChart3, Trophy, PartyPopper } from 'lucide-react';
 import { Empty, showToast } from '@/components/ui';
-import { formatSeconds } from '@/lib/utils';
+import { formatSeconds, dateKey } from '@/lib/utils';
 import { StudySession } from '@/lib/types';
 
-function today() { return new Date().toISOString().split('T')[0]; }
+function today() { return dateKey(new Date()); }
 
 const I = {
-  play: <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>,
-  pause: <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg>,
-  stop: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg>,
-  clock: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="13" r="8" stroke="currentColor" strokeWidth="2"/><path d="M12 9v4l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
-  bars: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  trophy: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M7 6H4a1 1 0 0 0-1 1v1a4 4 0 0 0 4 4M17 6h3a1 1 0 0 1 1 1v1a4 4 0 0 1-4 4" stroke="currentColor" strokeWidth="2"/></svg>,
+  play: <Play size={16} fill="currentColor" />,
+  pause: <Pause size={16} />,
+  stop: <Square size={14} />,
+  clock: <Clock size={14} />,
+  bars: <BarChart3 size={14} />,
+  trophy: <Trophy size={14} />,
 };
 
 export default function StudyTimerPage() {
@@ -107,7 +108,7 @@ export default function StudyTimerPage() {
         durationSec: finalElapsed,
       };
       await addStudySession(session);
-      showToast(`Session saved: ${formatSeconds(finalElapsed)} ✓`);
+      showToast(`Session saved: ${formatSeconds(finalElapsed)}`);
     }
     localStorage.removeItem('gate_timer_v2');
     setRunning(false); setPaused(false); setElapsed(0); setPausedAt(0);
@@ -119,7 +120,7 @@ export default function StudyTimerPage() {
   for (let i = 13; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dKey = d.toISOString().split('T')[0];
+    const dKey = dateKey(d);
     const daySessions = sessions.filter(s => s.start?.startsWith(dKey));
     const hrs = daySessions.reduce((a, s) => a + s.durationSec, 0) / 3600;
     last14.push({ date: dKey, hours: Math.round(hrs * 10) / 10, sessions: daySessions.length });
@@ -212,7 +213,7 @@ export default function StudyTimerPage() {
           fontSize: 13, fontWeight: 700,
           color: hoursToday >= dailyTarget ? '#4ADE80' : hoursToday >= 3 ? '#FB923C' : '#F87171',
         }}>{hoursToday}h today</span>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>— target {dailyTarget}h {hoursToday >= dailyTarget ? '· met! 🎉' : '· keep going!'}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>— target {dailyTarget}h {hoursToday >= dailyTarget ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>· met! <PartyPopper size={12} color="#4ADE80" /></span> : '· keep going!'}</span>
       </div>
 
       <div className="panel">

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import { Download, Upload, RefreshCw } from 'lucide-react';
 import { PageHeader, Card, CardHeader, showToast } from '@/components/ui';
 
 interface Stats { scores: number; sessions: number; mockTests: number; pyqEntries: number; revisions: number; fileSizeKB: number; }
@@ -18,7 +19,7 @@ export default function StoragePage() {
     a.href = '/api/export';
     a.download = `gate-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
-    showToast('Backup downloaded ✓');
+    showToast('Backup downloaded');
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -30,18 +31,18 @@ export default function StoragePage() {
       if (!confirm('This will overwrite your current data. Continue?')) return;
       await syncToServer(parsed);
       await loadData();
-      showToast('Data restored from backup ✓');
+      showToast('Data restored from backup');
     } catch {
       showToast('Invalid backup file');
     }
   }
 
   async function handleSync() {
-    showToast('Syncing…');
+    showToast('Syncing\u2026');
     await loadData();
     const res = await fetch('/api/stats').then(r => r.json());
     setStats(res);
-    showToast('Synced ✓');
+    showToast('Synced');
   }
 
   return (
@@ -77,12 +78,12 @@ export default function StoragePage() {
           Download a full JSON backup of your data. Keep this safe — you can restore it if needed.
         </p>
         <div className="flex gap-2.5 flex-wrap">
-          <button className="btn btn-primary" onClick={handleExport}>⬇ Download backup</button>
-          <label className="btn cursor-pointer">
-            ⬆ Restore from backup
+          <button className="btn btn-primary" onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Download size={14} /> Download backup</button>
+          <label className="btn cursor-pointer" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Upload size={14} /> Restore from backup
             <input type="file" accept=".json" className="hidden" onChange={handleImport} />
           </label>
-          <button className="btn" style={{ color: '#2563EB' }} onClick={handleSync}>🔄 Force sync</button>
+          <button className="btn" style={{ color: '#2563EB', display: 'flex', alignItems: 'center', gap: 6 }} onClick={handleSync}><RefreshCw size={14} /> Force sync</button>
         </div>
       </Card>
 

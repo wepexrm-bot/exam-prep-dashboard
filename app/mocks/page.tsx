@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { ClipboardList, Plus, Trash2 } from 'lucide-react';
 import { PageHeader, Card, CardHeader, MetricCard, Empty, showToast } from '@/components/ui';
 import { MockModal } from '@/components/modals/ScoreModal';
 
@@ -33,10 +34,10 @@ export default function MocksPage() {
         <CardHeader title={`All mock tests (${mocks.length})`} />
         {mocks.length === 0 && (
           <div className="text-center py-10">
-            <div className="text-4xl mb-3">📝</div>
+            <div className="flex justify-center mb-3"><ClipboardList size={40} strokeWidth={1.5} style={{ color: 'var(--muted)' }} /></div>
             <div className="font-semibold text-[15px] mb-1" style={{ color: 'var(--text)' }}>No mock tests logged yet</div>
             <div className="text-[13px] mb-5" style={{ color: 'var(--muted)' }}>Add your first mock test result</div>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add test</button>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={14} /> Add test</button>
           </div>
         )}
         {mocks.map((m, i) => {
@@ -54,8 +55,8 @@ export default function MocksPage() {
               </div>
               <button
                 onClick={() => { if (confirm('Delete this mock test?')) { deleteMock(origIdx); showToast('Mock test deleted'); } }}
-                className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border ml-2 transition-all"
-                style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border ml-2 transition-all flex items-center gap-1"
+                style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}><Trash2 size={11} /></button>
             </div>
           );
         })}

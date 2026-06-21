@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { PYQChapter, PYQSession } from '@/lib/types';
+import { Plus, Folder, FolderOpen, Trash2, ChevronDown } from 'lucide-react';
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
@@ -20,21 +21,6 @@ function getStats(d: PYQChapter) {
   const pct = d.total > 0 ? Math.min(100, Math.round((att / d.total) * 100)) : 0;
   const acc = att > 0 ? Math.round((cor / att) * 100) : 0;
   return { att, cor, pct, acc, isComplete: att >= d.total, remaining: Math.max(0, d.total - att) };
-}
-
-const I = {
-  folder: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M14 3v6h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>,
-  plus: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>,
-  trash: <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-  empty: <svg viewBox="0 0 24 24" fill="none" width="40" height="40"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" stroke="#3B4250" strokeWidth="1.5" strokeLinejoin="round"/><path d="M14 3v6h6" stroke="#3B4250" strokeWidth="1.5" strokeLinejoin="round"/></svg>,
-};
-
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 export default function PYQPage() {
@@ -116,7 +102,7 @@ export default function PYQPage() {
           </p>
         </div>
         <button className="btn btn-primary" onClick={openModal} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {I.plus} Add session
+          <Plus size={14} /> Add session
         </button>
       </div>
 
@@ -136,7 +122,7 @@ export default function PYQPage() {
 
       {subjectGroups.length === 0 && (
         <div className="panel" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>{I.empty}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}><FolderOpen size={40} strokeWidth={1.5} style={{ color: '#3B4250' }} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6 }}>No PYQ sessions yet</div>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>Start logging chapter-wise PYQ sessions</div>
           <button className="btn btn-primary" onClick={openModal}>+ Log your first session</button>
@@ -158,7 +144,7 @@ export default function PYQPage() {
                 width: 30, height: 30, borderRadius: 9, flexShrink: 0,
                 background: 'rgba(34,211,238,0.12)', color: '#22D3EE',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>{I.folder}</div>
+              }}><Folder size={14} /></div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{subj.name}</div>
@@ -172,7 +158,7 @@ export default function PYQPage() {
                 background: accBg(subjAcc), color: accColor(subjAcc),
               }}>{subjAcc}% acc</span>
 
-              <span style={{ color: '#7C8089', flexShrink: 0 }}><Chevron open={!isCollapsed} /></span>
+              <span style={{ color: '#7C8089', flexShrink: 0 }}><ChevronDown size={16} style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} /></span>
             </div>
 
             {!isCollapsed && (
@@ -246,7 +232,7 @@ export default function PYQPage() {
                                   background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer',
                                   padding: '2px 4px', borderRadius: 4, flexShrink: 0, display: 'flex',
                                 }}
-                              >{I.trash}</button>
+                              ><Trash2 size={12} /></button>
                             </div>
                           ))}
                         </div>
@@ -260,7 +246,7 @@ export default function PYQPage() {
         );
       })}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="📂 Log PYQ Session">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><FolderOpen size={16} /> Log PYQ Session</span>}>
         <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: '1rem', lineHeight: 1.6 }}>
           Sessions accumulate — set number increases when you complete all questions.
         </p>

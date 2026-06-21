@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export type ExamType = 'GATE' | 'NET';
+export type ExamType = string;
 
 export interface IUser extends Document {
   username: string;
@@ -14,7 +14,7 @@ const UserSchema = new Schema<IUser>(
   {
     username: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true },
-    examType: { type: String, enum: ['GATE', 'NET'], default: 'GATE' },
+    examType: { type: String, default: 'GATE' },
   },
   { timestamps: true }
 );
@@ -30,3 +30,4 @@ UserSchema.methods.comparePassword = function (candidate: string) {
 };
 
 export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+

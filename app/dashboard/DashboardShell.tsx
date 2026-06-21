@@ -11,9 +11,9 @@ function Shell({ username, examType, children }: { username: string; examType: E
   const { loadData } = useApp();
 
   async function handleSync() {
-    showToast('Syncing… ⏳');
+    showToast('Syncing\u2026');
     await loadData();
-    showToast('Data synced ✅');
+    showToast('Data synced');
   }
 
   return (

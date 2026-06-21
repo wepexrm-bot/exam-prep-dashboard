@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { Settings, Trash2 } from 'lucide-react';
 import { PageHeader, Card, CardHeader, FormGroup, showToast } from '@/components/ui';
 
 export default function SettingsPage() {
@@ -24,7 +25,7 @@ export default function SettingsPage() {
       if (!r.ok) { setPassMsg({ text: `✕ ${d.error}`, ok: false }); return; }
       setPassMsg({ text: '✓ Password changed successfully', ok: true });
       setCurrPass(''); setNewPass(''); setConfirmPass('');
-      showToast('Password changed ✓');
+      showToast('Password changed');
     } catch {
       setPassMsg({ text: '✕ Network error', ok: false });
     }
@@ -32,7 +33,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="⚙️ Settings" sub="Manage your account and preferences" />
+      <PageHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Settings size={20} /> Settings</span>} sub="Manage your account and preferences" />
 
       {/* Change password */}
       <Card className="mb-4">
@@ -63,7 +64,7 @@ export default function SettingsPage() {
           {[8, 10, 12, 14, 16, 20].map(h => (
             <button key={h}
               className={`btn btn-sm ${data.weeklyTarget === h ? 'btn-primary' : ''}`}
-              onClick={() => { setWeeklyTarget(h); showToast(`Weekly target set to ${h}h ✓`); }}>
+              onClick={() => { setWeeklyTarget(h); showToast(`Weekly target set to ${h}h`); }}>
               {h}h
             </button>
           ))}
@@ -91,9 +92,9 @@ export default function SettingsPage() {
       <Card className="border-l-4 border-danger">
         <CardHeader title="Danger zone" />
         <p className="text-[13px] mb-3" style={{ color: 'var(--muted)' }}>These actions are irreversible. Be careful.</p>
-        <button className="btn" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+          <button className="btn flex items-center gap-1.5" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
           onClick={() => { if (confirm('Delete ALL goals? This cannot be undone.')) { clearAllGoals(); showToast('All goals cleared'); } }}>
-          🗑 Clear all goals
+          <Trash2 size={14} /> Clear all goals
         </button>
       </Card>
     </>
