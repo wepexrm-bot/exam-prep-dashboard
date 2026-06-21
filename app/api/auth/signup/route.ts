@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const existing = await users.findOne({ email: normalizedEmail });
     if (existing && existing.verified) {
-      return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'Registration failed' }, { status: 400 });
     }
 
     const passwordHash = await hashPassword(password);

@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     const users = await getUsersCollection();
     const user = await users.findOne({ email: normalizedEmail });
 
-    if (!user) return NextResponse.json({ error: 'No account found for this email' }, { status: 404 });
-    if (user.verified) return NextResponse.json({ error: 'Account already verified' }, { status: 400 });
+    if (!user) return NextResponse.json({ error: 'Resend failed' }, { status: 400 });
+    if (user.verified) return NextResponse.json({ error: 'Resend failed' }, { status: 400 });
 
     const code = generateVerificationCode();
     const expires = new Date(Date.now() + 15 * 60 * 1000);

@@ -45,12 +45,17 @@ export async function POST(req: NextRequest) {
 
   await connectDB();
   const body = await req.json();
-  body.lastUpdated = new Date();
 
-  // Always save by userId for new/migrated accounts
+  // Whitelist allowed fields — prevents mass-assignment of arbitrary schema fields
+  const ALLOWED_FIELDS = ['goals', 'subjects', 'dailyScores', 'mockTests', 'pyqData', 'revisions', 'studySessions', 'weeklyTarget'] as const;
+  const update: Record<string, unknown> = { lastUpdated: new Date() };
+  for (const key of ALLOWED_FIELDS) {
+    if (key in body) update[key] = body[key];
+  }
+
   const doc = await AppData.findOneAndUpdate(
     { userId: auth.userId },
-    { $set: { ...body, userId: auth.userId, username: auth.userId } },
+    { $set: { ...update, userId: auth.userId, username: auth.userId } },
     { upsert: true, new: true }
   ).lean();
 

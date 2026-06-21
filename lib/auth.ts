@@ -23,7 +23,7 @@ export function signToken(payload: AuthPayload): string {
 
 export function verifyToken(token: string): AuthPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as unknown as AuthPayload;
+    return jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as unknown as AuthPayload;
   } catch {
     return null;
   }

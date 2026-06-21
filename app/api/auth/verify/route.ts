@@ -20,30 +20,10 @@ export async function POST(req: NextRequest) {
     const user = await users.findOne({ email: normalizedEmail });
 
     if (!user) {
-      return NextResponse.json({ error: 'No account found for this email' }, { status: 404 });
+      return NextResponse.json({ error: 'Verification failed' }, { status: 400 });
     }
     if (user.verified) {
-      return NextResponse.json({ error: 'This account is already verified. Please log in.' }, { status: 400 });
-    }
-    if (!user.verificationCode || !user.verificationExpires) {
-      return NextResponse.json({ error: 'No verification code found. Please sign up again.' }, { status: 400 });
-    }
-    if (new Date() > new Date(user.verificationExpires)) {
-      return NextResponse.json({ error: 'Code expired. Please request a new one.' }, { status: 400 });
-    }
-    if ((user.verifyAttempts || 0) >= 5) {
-      await users.updateOne(
-        { email: normalizedEmail },
-        { $unset: { verificationCode: '', verificationExpires: '', verifyAttempts: '' } }
-      );
-      return NextResponse.json({ error: 'Too many incorrect attempts. Request a new code.' }, { status: 429 });
-    }
-    if (user.verificationCode !== code.trim()) {
-      await users.updateOne(
-        { email: normalizedEmail },
-        { $inc: { verifyAttempts: 1 } }
-      );
-      return NextResponse.json({ error: 'Incorrect code. Please try again.' }, { status: 400 });
+      return NextResponse.json({ error: 'Verification failed' }, { status: 400 });
     }
 
     await users.updateOne(
