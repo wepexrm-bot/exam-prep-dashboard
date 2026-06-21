@@ -1,30 +1,29 @@
-import nodemailer from 'nodemailer';
+import { BrevoClient } from '@getbrevo/brevo';
 
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL;
 
-const transporter = GMAIL_USER && GMAIL_APP_PASSWORD
-  ? nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-    })
-  : null;
+const client = BREVO_API_KEY ? new BrevoClient({ apiKey: BREVO_API_KEY }) : null;
 
 export async function sendVerificationEmail(to: string, name: string, code: string) {
-  if (!transporter) {
-    console.warn('Email not configured — skipping verification email. Set GMAIL_USER and GMAIL_APP_PASSWORD.');
-    return { success: false, error: new Error('Email not configured') };
+  if (!client || !BREVO_SENDER_EMAIL) {
+    const msg = !BREVO_API_KEY
+      ? 'BREVO_API_KEY not configured'
+      : 'BREVO_SENDER_EMAIL not configured';
+    console.warn(`Email not configured (${msg}) — failing open with fallback code.`);
+    return { success: false, code, error: new Error(msg) };
   }
+
   try {
-    await transporter.sendMail({
-      from: `"TargetZero" <${GMAIL_USER}>`,
-      to,
+    await client.transactionalEmails.sendTransacEmail({
+      sender: { name: 'Preparation', email: BREVO_SENDER_EMAIL },
+      to: [{ email: to, name }],
       subject: `Your verification code: ${code}`,
-      html: `
+      htmlContent: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #0F172A; border-radius: 16px;">
-          <h2 style="color: #fff; margin-bottom: 8px;">Hi ${name} 👋</h2>
+          <h2 style="color: #fff; margin-bottom: 8px;">Hi ${name}</h2>
           <p style="color: #94A3B8; font-size: 14px; line-height: 1.6;">
-            Welcome to TargetZero! Use the code below to verify your account and start tracking your exam prep.
+            Welcome to Preparation! Use the code below to verify your account and start tracking your exam prep.
           </p>
           <div style="background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3); border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
             <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #22D3EE;">${code}</span>
@@ -35,9 +34,11 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
         </div>
       `,
     });
+    console.log('Brevo email sent to', to);
     return { success: true };
   } catch (err) {
-    console.error('Email send error:', err);
-    return { success: false, error: err };
+    const message = err instanceof Error ? err.message : 'Unknown email error';
+    console.error('Email send error:', message);
+    return { success: false, code, error: new Error(message) };
   }
 }
