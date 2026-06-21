@@ -7,12 +7,14 @@ function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get('email') || '';
+  const emailFailed = params.get('emailFailed') === '1';
 
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   function handleChange(i: number, val: string) {
@@ -65,7 +67,12 @@ function VerifyForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Failed to resend code');
+        if (data.devCode) {
+          setDevCode(data.devCode);
+          setError(data.error + ' Use the code below to verify.');
+        } else {
+          setError(data.error || 'Failed to resend code');
+        }
       } else {
         setResent(true);
         setTimeout(() => setResent(false), 4000);
@@ -96,7 +103,7 @@ function VerifyForm() {
         Check your inbox
       </h1>
       <p style={{ fontSize: 13, color: '#64748B', marginTop: 6, textAlign: 'center', maxWidth: 280 }}>
-        We sent a 6-digit code to <strong style={{ color: '#CBD5E1' }}>{email}</strong>
+        {emailFailed ? 'Enter the code below to verify your account.' : <>We sent a 6-digit code to <strong style={{ color: '#CBD5E1' }}>{email}</strong></>}
       </p>
 
       <div style={{
@@ -128,6 +135,35 @@ function VerifyForm() {
           color: '#F87171', fontSize: 12, padding: '10px 14px', borderRadius: 10, marginBottom: 16,
           maxWidth: 300, textAlign: 'center',
         }}>{error}</div>
+      )}
+
+      {devCode && (
+        <div style={{
+          background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)',
+          color: '#22D3EE', fontSize: 13, padding: '14px 18px', borderRadius: 12, marginBottom: 16,
+          maxWidth: 300, textAlign: 'center',
+        }}>
+          <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Email not delivered — fallback code
+          </div>
+          <div style={{ fontFamily: 'monospace', fontSize: 24, fontWeight: 800, letterSpacing: 8, color: '#fff' }}>
+            {devCode}
+          </div>
+          <button
+            onClick={() => {
+              const arr = devCode.split('');
+              setDigits(arr);
+            }}
+            style={{
+              marginTop: 10, background: 'rgba(255,255,255,0.08)', border: 'none',
+              color: '#fff', padding: '6px 16px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >Auto-fill code</button>
+          <div style={{ marginTop: 8, fontSize: 10, color: 'var(--muted)' }}>
+            Set GMAIL_USER &amp; GMAIL_APP_PASSWORD in your server env to send real emails.
+          </div>
+        </div>
       )}
 
       <button

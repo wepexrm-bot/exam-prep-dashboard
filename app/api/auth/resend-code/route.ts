@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
 
     const emailResult = await sendVerificationEmail(normalizedEmail, user.name, code);
     if (!emailResult.success) {
-      return NextResponse.json({ error: 'Failed to resend email. Please try again in a moment.' }, { status: 502 });
+      const body: Record<string, unknown> = { error: 'Failed to resend email. Please try again in a moment.' };
+      if (emailResult.code) body.devCode = emailResult.code;
+      return NextResponse.json(body, { status: 502 });
     }
     return NextResponse.json({ success: true });
   } catch (err) {
