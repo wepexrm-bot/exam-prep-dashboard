@@ -71,11 +71,7 @@ export default function SignupPage() {
         setLoading(false);
         return;
       }
-      // Status 207 = account created but the verification email failed to
-      // send. Pass that through to the verify page so it's visible there
-      // instead of silently treating this as a full success.
-      const emailWarning = res.status === 207 ? '&emailFailed=1' : '';
-      router.push(`/verify?email=${encodeURIComponent(email)}${emailWarning}`);
+      router.push('/dashboard');
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);

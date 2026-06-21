@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsersCollection, connectDB } from '@/lib/db';
-import { hashPassword, generateVerificationCode } from '@/lib/auth';
-import { sendVerificationEmail } from '@/lib/email';
+import { hashPassword, signToken, TOKEN_NAME } from '@/lib/auth';
 import { ExamConfig } from '@/models/ExamConfig';
 import { checkRateLimit } from '@/lib/rateLimit';
 
@@ -24,8 +23,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Password must be at least 8 characters with uppercase, lowercase, and a number' }, { status: 400 });
     }
 
-    // Validate against the real ExamConfig collection — not a hardcoded
-    // list — so newly seeded exams (e.g. GOVT) work without a code change.
     await connectDB();
     const validExam = await ExamConfig.findOne({ examId: examType, active: true }).lean();
     if (!validExam) {
@@ -41,40 +38,38 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordHash = await hashPassword(password);
-    const code = generateVerificationCode();
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
+    let userId: string;
     if (existing && !existing.verified) {
-      // Re-signup attempt before verifying — update existing unverified record
       await users.updateOne(
         { email: normalizedEmail },
-        {
-          $set: {
-            name, passwordHash, examType, examYear: Number(examYear),
-            verificationCode: code, verificationExpires: expires,
-          },
-        }
+        { $set: { name, passwordHash, examType, examYear: Number(examYear), verified: true } }
       );
+      userId = existing._id!.toString();
     } else {
-      await users.insertOne({
+      const result = await users.insertOne({
         email: normalizedEmail,
         name,
         passwordHash,
         examType,
         examYear: Number(examYear),
-        verified: false,
-        verificationCode: code,
-        verificationExpires: expires,
+        verified: true,
         createdAt: new Date(),
       });
+      userId = result.insertedId.toString();
     }
 
-    const emailResult = await sendVerificationEmail(normalizedEmail, name, code);
-    if (!emailResult.success) {
-      return NextResponse.json({ error: 'Account created but failed to send verification email. Try resending.' }, { status: 207 });
-    }
+    const token = signToken({ userId, email: normalizedEmail, name, examType });
 
-    return NextResponse.json({ success: true, email: normalizedEmail });
+    const res = NextResponse.json({ success: true, name, examType });
+    res.cookies.set(TOKEN_NAME, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60,
+      path: '/',
+    });
+    return res;
   } catch (err) {
     console.error('Signup error:', err);
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
