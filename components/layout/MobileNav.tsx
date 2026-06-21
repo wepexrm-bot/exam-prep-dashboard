@@ -64,7 +64,7 @@ interface MobileNavProps {
 
 export function MobileTopBar({ onOpenDrawer, examType: examTypeProp }: { onOpenDrawer: () => void; examType: ExamType }) {
   const examType: ExamType = (examTypeProp === "GATE" || examTypeProp === "NET") ? examTypeProp : "GATE";
-  const cfg = EXAM_CONFIG[examType];
+  const cfg = EXAM_CONFIG[examType as keyof typeof EXAM_CONFIG];
   return (
     <div className="md:hidden flex" style={{
       position: 'fixed', top: 0, left: 0, right: 0, height: 56, zIndex: 50,
@@ -122,7 +122,7 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
   const pathname = usePathname();
   const { data } = useApp();
   const streak = computeStreak(data);
-  const cfg = EXAM_CONFIG[examType];
+  const cfg = EXAM_CONFIG[examType as keyof typeof EXAM_CONFIG];
 
   async function handleLogout() {
     if (!confirm('Sign out?')) return;

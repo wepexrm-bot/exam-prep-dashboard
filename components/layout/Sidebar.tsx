@@ -50,7 +50,7 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
   const router = useRouter();
   const { data } = useApp();
   const streak = computeStreak(data);
-  const cfg = EXAM_CONFIG[examType];
+  const cfg = EXAM_CONFIG[examType as keyof typeof EXAM_CONFIG];
 
   async function handleLogout() {
     if (!confirm('Sign out?')) return;
