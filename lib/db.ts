@@ -24,7 +24,11 @@ export async function connectDB(): Promise<mongoose.Connection> {
   if (cached.conn) return cached.conn;
   if (!cached.promise) {
     cached.promise = mongoose
-      .connect(MONGODB_URI, { bufferCommands: false })
+      .connect(MONGODB_URI, {
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+      })
       .then((m) => m.connection);
   }
   cached.conn = await cached.promise;
@@ -36,16 +40,16 @@ export async function connectDB(): Promise<mongoose.Connection> {
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
-if (process.env.NODE_ENV === 'development') {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(MONGODB_URI);
-    global._mongoClientPromise = client.connect();
-  }
-  clientPromise = global._mongoClientPromise;
-} else {
-  client = new MongoClient(MONGODB_URI);
-  clientPromise = client.connect();
+const CLIENT_OPTS = {
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 5000,
+};
+
+if (!global._mongoClientPromise) {
+  client = new MongoClient(MONGODB_URI, CLIENT_OPTS);
+  global._mongoClientPromise = client.connect();
 }
+clientPromise = global._mongoClientPromise;
 
 export { clientPromise };
 
