@@ -59,12 +59,16 @@ export default function SignupPage() {
       return;
     }
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, examType, examYear }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Something went wrong');
@@ -76,8 +80,11 @@ export default function SignupPage() {
       // instead of silently treating this as a full success.
       const emailWarning = res.status === 207 ? '&emailFailed=1' : '';
       router.push(`/verify?email=${encodeURIComponent(email)}${emailWarning}`);
-    } catch {
-      setError('Network error. Please try again.');
+    } catch (err) {
+      clearTimeout(timeout);
+      setError(err instanceof DOMException && err.name === 'AbortError'
+        ? 'Request timed out. Check your connection and try again.'
+        : 'Network error. Please try again.');
       setLoading(false);
     }
   }
