@@ -144,7 +144,7 @@ function VerifyForm() {
           maxWidth: 300, textAlign: 'center',
         }}>
           <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Email not delivered — fallback code
+            Your verification code
           </div>
           <div style={{ fontFamily: 'monospace', fontSize: 24, fontWeight: 800, letterSpacing: 8, color: '#fff' }}>
             {devCode}
@@ -160,9 +160,6 @@ function VerifyForm() {
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >Auto-fill code</button>
-          <div style={{ marginTop: 8, fontSize: 10, color: 'var(--muted)' }}>
-            Set GMAIL_USER &amp; GMAIL_APP_PASSWORD in your server env to send real emails.
-          </div>
         </div>
       )}
 
