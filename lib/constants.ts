@@ -68,19 +68,6 @@ export const DEFAULT_NET_SUBJECTS = [
   'Cultural Studies & New Literatures',
 ];
 
-export const NET_MOCK_SUBJECTS = [
-  'Full NET',
-  'Paper 1 (General)',
-  'Paper 2 (English)',
-  'Teaching & Research Aptitude',
-  'Logical Reasoning',
-  'British Literature',
-  'American Literature',
-  'Indian Writing in English',
-  'Literary Theory & Criticism',
-  'Language & Linguistics',
-];
-
 // ── Shared ─────────────────────────────────────────────────
 
 export const SUB_COLORS = [
@@ -96,13 +83,6 @@ export type GoalTag = typeof GOAL_TAGS[number];
 export const GATE_GOAL_TAGS = ['CS', 'Math', 'CN', 'Test', 'Revision', 'PYQ', 'Other'] as const;
 export const NET_GOAL_TAGS = ['Paper1', 'Paper2', 'Revision', 'Test', 'Reading', 'Writing', 'Other'] as const;
 
-export const GATE_MOCK_SUBJECTS = [
-  'Full GATE', 'CS Core', 'Mathematics', 'Data Structures', 'Algorithms',
-  'Operating Systems', 'Computer Networks', 'DBMS', 'Digital Logic',
-  'Computer Architecture (CAO)', 'Compiler Design', 'Theory of Computation',
-  'Aptitude & Reasoning',
-];
-
 export const REVISION_INTERVALS = [3, 7, 14, 30];
 
 export const EXAM_CONFIG = {
@@ -113,7 +93,6 @@ export const EXAM_CONFIG = {
     colorLight: '#DBEAFE',
     tagline: 'CS 2026',
     subjects: DEFAULT_GATE_SUBJECTS,
-    mockSubjects: GATE_MOCK_SUBJECTS,
     goalTags: GATE_GOAL_TAGS,
   },
   NET: {
@@ -123,7 +102,6 @@ export const EXAM_CONFIG = {
     colorLight: '#EDE9FE',
     tagline: 'English 2026',
     subjects: DEFAULT_NET_SUBJECTS,
-    mockSubjects: NET_MOCK_SUBJECTS,
     goalTags: NET_GOAL_TAGS,
   },
 } as const;

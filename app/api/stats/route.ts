@@ -16,7 +16,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     scores: (doc.dailyScores as unknown[])?.length ?? 0,
     sessions: (doc.studySessions as unknown[])?.length ?? 0,
-    mockTests: (doc.mockTests as unknown[])?.length ?? 0,
     pyqEntries: (doc.pyqData as unknown[])?.length ?? 0,
     revisions: (doc.revisions as unknown[])?.length ?? 0,
     fileSizeKB: Math.round(Buffer.byteLength(json, 'utf8') / 1024),

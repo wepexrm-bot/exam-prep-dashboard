@@ -4,7 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { Download, Upload, RefreshCw } from 'lucide-react';
 import { PageHeader, Card, CardHeader, showToast } from '@/components/ui';
 
-interface Stats { scores: number; sessions: number; mockTests: number; pyqEntries: number; revisions: number; fileSizeKB: number; }
+interface Stats { scores: number; sessions: number; pyqEntries: number; revisions: number; fileSizeKB: number; }
 
 export default function StoragePage() {
   const { data, loadData, syncToServer } = useApp();
@@ -56,7 +56,6 @@ export default function StoragePage() {
           {stats ? [
             ['Daily scores', stats.scores],
             ['Study sessions', stats.sessions],
-            ['Mock tests', stats.mockTests],
             ['PYQ entries', stats.pyqEntries],
             ['Revisions', stats.revisions],
             ['Data size', `${stats.fileSizeKB} KB`],

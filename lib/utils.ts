@@ -51,10 +51,6 @@ export function computeStreak(data: AppData): number {
     });
   });
 
-  (data.mockTests || []).forEach(m => {
-    if (m.date) activeDates.add(m.date);
-  });
-
   (data.revisions || []).forEach(r => {
     if (r.lastRevised) activeDates.add(r.lastRevised);
   });
@@ -106,14 +102,7 @@ export function getPrediction(data: AppData, weights: Record<string, number> = {
     ? (pyqAccList.reduce((a, v) => a + v, 0) / pyqAccList.length - 50) / 200
     : 0;
 
-  const mocks = data.mockTests || [];
-  let mockBoost = 0;
-  if (mocks.length) {
-    const avgMock = mocks.reduce((a, m) => a + (m.score / m.total) * 100, 0) / mocks.length;
-    mockBoost = ((avgMock - baseAvg) / 100) * 0.3;
-  }
-
-  const proj = Math.min(100, baseAvg * (0.7 + subjectFactor * 0.4) + pyqBoost * 10 + mockBoost * 10);
+  const proj = Math.min(100, baseAvg * (0.7 + subjectFactor * 0.4) + pyqBoost * 10);
 
   const advice = subjects
     .filter(s => getPct(s) < 50)

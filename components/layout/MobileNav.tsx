@@ -1,6 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, BarChart3, Wand2, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Wand2, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { EXAM_CONFIG } from '@/lib/constants';
@@ -14,7 +15,6 @@ const I = {
   revision: <RefreshCw size={16} />,
   timer: <Timer size={16} />,
   scores: <TrendingUp size={16} />,
-  mocks: <BarChart3 size={16} />,
   predict: <Wand2 size={16} />,
   storage: <Database size={16} />,
   settings: <Settings size={16} />,
@@ -46,7 +46,6 @@ const ALL_NAV = [
   ]},
   { section: 'Performance', items: [
     { page: 'scores', icon: I.scores, label: 'Score Log' },
-    { page: 'mocks', icon: I.mocks, label: 'Mock Tests' },
     { page: 'predict', icon: I.predict, label: 'Prediction' },
     { page: 'storage', icon: I.storage, label: 'Data & Backup' },
     { page: 'settings', icon: I.settings, label: 'Settings' },
@@ -121,7 +120,8 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
   const router = useRouter();
   const pathname = usePathname();
   const { data } = useApp();
-  const streak = computeStreak(data);
+  const [streak, setStreak] = useState(0);
+  useEffect(() => { setStreak(computeStreak(data)); }, [data]);
   const cfg = EXAM_CONFIG[examType as keyof typeof EXAM_CONFIG];
 
   async function handleLogout() {

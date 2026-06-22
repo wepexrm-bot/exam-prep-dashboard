@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { AppData, DailyScore, Goal, MockTest, PYQChapter, PYQSession, Revision, StudySession, Subject } from '@/lib/types';
+import { AppData, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject } from '@/lib/types';
 import { useExamConfig } from '@/lib/useExamConfig';
 
 interface AppContextType {
@@ -17,9 +17,7 @@ interface AppContextType {
   clearDoneGoals: () => Promise<void>;
   clearAllGoals: () => Promise<void>;
   addScore: (score: DailyScore) => Promise<void>;
-  deleteScore: (date: string) => Promise<void>;
-  addMock: (mock: MockTest) => Promise<void>;
-  deleteMock: (idx: number) => Promise<void>;
+  deleteScore: (date: string, title?: string) => Promise<void>;
   addPYQSession: (key: string, total: number, session: PYQSession) => Promise<void>;
   deletePYQSession: (key: string, idx: number) => Promise<void>;
   addRevision: (rev: Omit<Revision, 'lastRevised'>) => Promise<void>;
@@ -102,7 +100,6 @@ export function AppProvider({
     goals: [],
     subjects: defaultSubjects,
     dailyScores: [],
-    mockTests: [],
     pyqData: [],
     revisions: [],
     studySessions: [],
@@ -140,11 +137,22 @@ export function AppProvider({
     setLoading(true);
     try {
       const d = await apiCall('GET', '/api/data');
+      const rawGoals: Goal[] = (d.goals || []).map((g: Goal) => ({ ...g, date: g.date || todayLocal() }));
+      const todayK = todayLocal();
+      const existingTexts = new Set(rawGoals.filter(g => g.date === todayK).map(g => g.text));
+      const maxId = Math.max(0, ...rawGoals.map(g => g.id));
+      const carryoverGoals: Goal[] = [];
+      let nextId = maxId + 1;
+      rawGoals.forEach(g => {
+        if (g.done || g.date >= todayK || g.endDate || existingTexts.has(g.text)) return;
+        existingTexts.add(g.text);
+        carryoverGoals.push({ ...g, id: nextId++, date: todayK, done: false });
+      });
+      const goals = [...rawGoals, ...carryoverGoals];
       setData({
-        goals: (d.goals || []).map((g: Goal) => ({ ...g, date: g.date || todayLocal() })),
+        goals,
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
         dailyScores: d.dailyScores || [],
-        mockTests: d.mockTests || [],
         pyqData: d.pyqData || [],
         revisions: d.revisions || [],
         studySessions: d.studySessions || [],
@@ -196,7 +204,8 @@ export function AppProvider({
 
   const addScore = useCallback(async (score: DailyScore) => {
     setData(prev => {
-      const idx = prev.dailyScores.findIndex(s => s.date === score.date);
+      const matchKey = (s: DailyScore) => s.date === score.date && (s.title || '') === (score.title || '');
+      const idx = prev.dailyScores.findIndex(matchKey);
       const scores = idx >= 0
         ? prev.dailyScores.map((s, i) => i === idx ? score : s)
         : [...prev.dailyScores, score];
@@ -206,20 +215,12 @@ export function AppProvider({
     });
   }, []);
 
-  const deleteScore = useCallback(async (date: string) => {
+  const deleteScore = useCallback(async (date: string, title?: string) => {
     setData(prev => {
-      const next = { ...prev, dailyScores: prev.dailyScores.filter(s => s.date !== date) };
-      apiCall('DELETE', `/api/scores?date=${date}`).catch(() => showErrorToast('Failed to delete score'));
+      const next = { ...prev, dailyScores: prev.dailyScores.filter(s => s.date !== date || (title != null && (s.title || '') !== title)) };
+      apiCall('DELETE', `/api/scores?date=${date}${title ? `&title=${encodeURIComponent(title)}` : ''}`).catch(() => showErrorToast('Failed to delete score'));
       return next;
     });
-  }, []);
-
-  const addMock = useCallback(async (mock: MockTest) => {
-    mutate(prev => ({ ...prev, mockTests: [...prev.mockTests, mock] }));
-  }, []);
-
-  const deleteMock = useCallback(async (idx: number) => {
-    mutate(prev => ({ ...prev, mockTests: prev.mockTests.filter((_, i) => i !== idx) }));
   }, []);
 
   const addPYQSession = useCallback(async (key: string, total: number, session: PYQSession) => {
@@ -335,7 +336,7 @@ export function AppProvider({
     <AppContext.Provider value={{
       data, loading, examType, username, loadData, syncToServer,
       toggleGoal, addGoal, updateGoal, deleteGoal, clearDoneGoals, clearAllGoals,
-      addScore, deleteScore, addMock, deleteMock,
+      addScore, deleteScore,
       addPYQSession, deletePYQSession,
       addRevision, markRevised, deleteRevision,
       addSubject, deleteSubject, addChapter, toggleChapter, deleteChapter, renameChapter,

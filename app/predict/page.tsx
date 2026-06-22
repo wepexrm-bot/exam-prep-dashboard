@@ -10,10 +10,8 @@ export default function PredictPage() {
   const { config: cfg } = useExamConfig(examType);
   const pred = getPrediction(data, cfg.weights);
   const scores = data.dailyScores || [];
-  const mocks = data.mockTests || [];
   const recent = scores.slice(-7);
   const improving = recent.length >= 2 && recent[recent.length - 1].score > recent[0].score;
-  const avgMock = mocks.length ? Math.round(mocks.reduce((a, m) => a + m.score / m.total * 100, 0) / mocks.length) : null;
   const avgSubPct = (data.subjects || []).length
     ? Math.round((data.subjects || []).reduce((a, s) => a + getPct(s), 0) / (data.subjects || []).length)
     : 0;
@@ -51,7 +49,6 @@ export default function PredictPage() {
                 ['Predicted score', pred.score, '#16A34A'],
                 ['Expected percentile', pred.percentile, cfg.color],
                 ['Qualifying chance', pred.qualify, '#7C3AED'],
-                ...(avgMock !== null ? [['Mock test avg', avgMock, '#D97706']] : []),
               ].map(([label, val, color]) => (
                 <div key={String(label)}>
                   <div className="flex justify-between text-[13px] mb-1">
@@ -77,7 +74,7 @@ export default function PredictPage() {
                 { label: 'Sessions logged', value: String(scores.length) },
                 { label: 'Best score', value: `${Math.max(...scores.map(s => s.score))}%` },
                 { label: '7-day avg', value: `${recent.length ? Math.round(recent.reduce((a, s) => a + s.score, 0) / recent.length) : 0}%` },
-                { label: 'Mock tests', value: `${mocks.length} taken` },
+
                 { label: 'PYQ chapters', value: `${(data.pyqData || []).length} tracked` },
                 { label: 'Revision sessions', value: `${(data.revisions || []).length} logged` },
               ].map(({ label, value }) => (

@@ -9,7 +9,6 @@ export interface IExamConfig extends Document {
   tagline: string;
   subjects: string[];
   weights: Record<string, number>;
-  mockSubjects: string[];
   goalTags: string[];
   examDate?: string;     // YYYY-MM-DD, optional, used for dashboard countdown
   active: boolean;       // allows hiding an exam from signup without deleting it
@@ -26,7 +25,6 @@ const ExamConfigSchema = new Schema<IExamConfig>(
     tagline: { type: String, default: '' },
     subjects: { type: [String], default: [] },
     weights: { type: Schema.Types.Mixed, default: {} },
-    mockSubjects: { type: [String], default: [] },
     goalTags: { type: [String], default: ['Study', 'Revision', 'Test', 'Other'] },
     examDate: { type: String },
     active: { type: Boolean, default: true },

@@ -24,13 +24,11 @@ export interface DailyScore {
   score: number;
   accuracy: number;
   hours: number;
-}
-
-export interface MockTest {
-  date: string;
-  score: number;
-  total: number;
-  subject: string;
+  title?: string;
+  totalMarks?: number;
+  rank?: number;
+  percentile?: number;
+  subject?: string;
 }
 
 export interface PYQSession {
@@ -64,7 +62,6 @@ export interface AppData {
   goals: Goal[];
   subjects: Subject[];
   dailyScores: DailyScore[];
-  mockTests: MockTest[];
   pyqData: PYQChapter[];
   revisions: Revision[];
   studySessions: StudySession[];

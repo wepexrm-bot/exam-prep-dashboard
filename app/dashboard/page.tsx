@@ -1,18 +1,16 @@
 'use client';
-import { Grid3X3, Clock, FileText, BarChart3, RefreshCw, Calendar, Flame, Plus, Timer } from 'lucide-react';
+import { Grid3X3, Clock, FileText, BarChart3, RefreshCw, Calendar, Flame, Plus, Timer, Layers } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Empty } from '@/components/ui';
 import { computeStreak, getDateLabel, getPrediction, today, dateKey } from '@/lib/utils';
 import { ScoreModal } from '@/components/modals/ScoreModal';
-import { MockModal } from '@/components/modals/ScoreModal';
 import { EXAM_CONFIG } from '@/lib/constants';
 
 const Icon = {
   all: <Grid3X3 size={14} />,
   study: <Timer size={14} />,
   pyq: <FileText size={14} />,
-  mock: <BarChart3 size={14} />,
   revision: <RefreshCw size={14} />,
   bars: <BarChart3 size={14} style={{ color: '#22D3EE' }} />,
   calendar: <Calendar size={14} style={{ color: '#22D3EE' }} />,
@@ -41,9 +39,9 @@ function Skeleton({ w = '100%', h = 18, radius = 8 }: { w?: string | number; h?:
 export default function DashboardPage() {
   const { data, loading, examType, username } = useApp() as any;
   const [showScore, setShowScore] = useState(false);
-  const [showMock, setShowMock] = useState(false);
+
   const [mounted, setMounted] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'study' | 'pyq' | 'mock' | 'revision'>('all');
+  const [filter, setFilter] = useState<'all' | 'study' | 'pyq' | 'revision'>('all');
   useEffect(() => { setMounted(true); }, []);
 
   const todayKey = today();
@@ -102,19 +100,25 @@ export default function DashboardPage() {
   const todayIdx = now.getDay();
   const [hoverDay, setHoverDay] = useState<number | null>(null);
 
-  const heatDays: { date: string; level: number; label: string }[] = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+  const heatDays: { date: string; dayNum: number; hours: number; level: 'none' | 'low' | 'medium' | 'high'; label: string }[] = [];
+  const nowMonth = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(year, month, day);
     const dKey = dateKey(d);
     const hrs = (data.studySessions || []).filter((s: any) => s.start?.startsWith(dKey))
       .reduce((a: number, s: any) => a + (s.durationSec || 0), 0) / 3600;
     const hasScore = (data.dailyScores || []).some((s: any) => s.date === dKey);
     const hasPyq = pyqData.some((p: any) => (p.sessions || []).some((s: any) => s.date === dKey));
-    const level = hrs >= 4 ? 4 : hrs >= 2 ? 3 : hrs > 0 ? 2 : (hasScore || hasPyq) ? 1 : 0;
+    let level: 'none' | 'low' | 'medium' | 'high' = 'none';
+    if (hrs > 0 && hrs <= 2.5) level = 'low';
+    else if (hrs > 2.5 && hrs <= 4.5) level = 'medium';
+    else if (hrs > 4.5) level = 'high';
+    else if (hasScore || hasPyq) level = 'low';
     heatDays.push({
-      date: dKey,
-      level,
+      date: dKey, dayNum: d.getDate(), hours: hrs, level,
       label: `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}: ${hrs > 0 ? `${Math.round(hrs * 10) / 10}h studied` : (hasScore || hasPyq) ? 'Light activity' : 'No activity'}`,
     });
   }
@@ -155,7 +159,7 @@ export default function DashboardPage() {
   });
   activities.sort((a, b) => b.ts - a.ts);
   const filteredActivities = filter === 'all' ? activities.slice(0, 6)
-    : activities.filter(a => a.type === filter || (filter === 'mock' && a.type === 'study')).slice(0, 6);
+    : activities.filter(a => a.type === filter).slice(0, 6);
 
   const cfg = EXAM_CONFIG[examType as 'GATE' | 'NET'];
   const displayName = username || 'there';
@@ -232,7 +236,7 @@ export default function DashboardPage() {
           { key: 'all', label: 'All', icon: Icon.all },
           { key: 'study', label: 'Study', icon: Icon.study },
           { key: 'pyq', label: 'PYQ', icon: Icon.pyq },
-          { key: 'mock', label: 'Mock', icon: Icon.mock },
+
           { key: 'revision', label: 'Revision', icon: Icon.revision },
         ].map(f => (
           <button key={f.key} onClick={() => setFilter(f.key as any)}
@@ -286,24 +290,28 @@ export default function DashboardPage() {
       </div>
 
       <div className="panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 24, height: 24, borderRadius: 8, background: 'rgba(34,211,238,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ width: 14, height: 14, display: 'inline-flex' }}>{Icon.calendar}</span>
+              <Layers size={14} color="#22D3EE" />
             </span>
-            Activity Heatmap
-          </span>
-          <span style={{ fontSize: 10, color: 'var(--muted)' }}>{now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Activity Heatmap</span>
+          </div>
+          <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>{nowMonth}</span>
         </div>
-        <div style={{ display: 'flex', gap: 12, fontSize: 9, color: 'var(--muted)', margin: '8px 0', alignItems: 'center' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(34,211,238,0.15)', display: 'inline-block' }} />low</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22D3EE', display: 'inline-block' }} />high</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6 }}>
           {heatDays.map((d, i) => {
-            const opacity = d.level === 0 ? 0.04 : d.level === 1 ? 0.15 : d.level === 2 ? 0.35 : d.level === 3 ? 0.6 : 1;
+            const bg = d.level === 'none' ? '#141b27' :
+              d.level === 'low' ? 'rgba(34,211,238,0.15)' :
+              d.level === 'medium' ? 'rgba(34,211,238,0.4)' : '#22D3EE';
+            const bd = d.level === 'none' ? '1px solid #1e273a' :
+              d.level === 'low' ? '1px solid rgba(34,211,238,0.12)' :
+              d.level === 'medium' ? '1px solid rgba(34,211,238,0.2)' : '1px solid rgba(34,211,238,0.4)';
+            const txtCol = d.level === 'high' ? '#0F172A' : d.level === 'none' ? '#6B7280' : '#22D3EE';
+            const sh = d.level === 'high' ? '0 0 10px rgba(34,211,238,0.35)' : 'none';
             return (
-              <div key={i} style={{ position: 'relative' }}
+              <div key={i} style={{ position: 'relative', aspectRatio: '1' }}
                 onMouseEnter={() => setHoverHeat(i)} onMouseLeave={() => setHoverHeat(null)}>
                 {hoverHeat === i && (
                   <div style={{
@@ -314,13 +322,33 @@ export default function DashboardPage() {
                   }}>{d.label}</div>
                 )}
                 <div style={{
-                  aspectRatio: '1', borderRadius: 5,
-                  background: d.level === 4 ? '#22D3EE' : `rgba(34,211,238,${opacity})`,
-                  boxShadow: d.level === 4 ? '0 0 10px rgba(34,211,238,0.5)' : 'none',
-                }} />
+                  width: '100%', height: '100%', borderRadius: 8,
+                  background: bg, border: bd, boxShadow: sh,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                  color: txtCol, cursor: 'pointer',
+                }}>
+                  {d.dayNum}
+                </div>
               </div>
             );
           })}
+        </div>
+
+        <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 14, fontSize: 10, color: 'var(--muted)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
+          <span style={{ fontWeight: 700 }}>Legend:</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: '#141b27', border: '1px solid #1e273a', display: 'inline-block' }} /> 0h
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.12)', display: 'inline-block' }} /> 1-2.5h
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(34,211,238,0.4)', border: '1px solid rgba(34,211,238,0.2)', display: 'inline-block' }} /> 2.5-4.5h
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: '#22D3EE', border: '1px solid rgba(34,211,238,0.4)', display: 'inline-block' }} /> 4.5h+
+          </span>
         </div>
       </div>
 
@@ -369,12 +397,10 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowMock(true)}>+ Mock test</button>
         <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setShowScore(true)}>Log today</button>
       </div>
 
       <ScoreModal open={showScore} onClose={() => setShowScore(false)} />
-      <MockModal open={showMock} onClose={() => setShowMock(false)} />
 
     </div>
   );

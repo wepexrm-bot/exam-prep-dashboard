@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Modal, ModalActions, FormGroup, showToast, Empty } from '@/components/ui';
 import { Goal } from '@/lib/types';
@@ -42,25 +42,6 @@ export default function GoalsCalendarPage() {
   const goals: Goal[] = data.goals || [];
   const { config: cfg } = useExamConfig(examType);
   const goalTags = cfg.goalTags;
-  const carryoverDone = useRef(false);
-
-  // ── Auto-carryover: incomplete goals from past dates move to today ────
-  useEffect(() => {
-    if (carryoverDone.current || goals.length === 0) return;
-    const today = todayKey();
-    const existingTodayTexts = new Set(goals.filter(g => g.date === today).map(g => g.text));
-    let carried = 0;
-    goals.forEach(g => {
-      if (g.done || g.date >= today || g.endDate) return;
-      if (existingTodayTexts.has(g.text)) return;
-      addGoal({ text: g.text, tag: g.tag, done: false, date: today });
-      existingTodayTexts.add(g.text);
-      carried++;
-    });
-    if (carried > 0) showToast(`${carried} goal${carried > 1 ? 's' : ''} carried over to today`);
-    carryoverDone.current = true;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goals.length]);
 
   const [viewMonth, setViewMonth] = useState(() => {
     const d = new Date();

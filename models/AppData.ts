@@ -25,11 +25,6 @@ const DailyScoreSchema = new Schema(
   { _id: false }
 );
 
-const MockTestSchema = new Schema(
-  { date: String, score: Number, total: Number, subject: String },
-  { _id: false }
-);
-
 const PYQSessionSchema = new Schema(
   { attempted: Number, correct: Number, accuracy: Number, date: String },
   { _id: false }
@@ -60,7 +55,6 @@ export interface IAppData extends Document {
   goals: typeof GoalSchema[];
   subjects: typeof SubjectSchema[];
   dailyScores: typeof DailyScoreSchema[];
-  mockTests: typeof MockTestSchema[];
   pyqData: typeof PYQChapterSchema[];
   revisions: typeof RevisionSchema[];
   studySessions: typeof StudySessionSchema[];
@@ -75,7 +69,6 @@ const AppDataSchema = new Schema<IAppData>(
     goals: { type: [GoalSchema], default: [] },
     subjects: { type: [SubjectSchema], default: [] },
     dailyScores: { type: [DailyScoreSchema], default: [] },
-    mockTests: { type: [MockTestSchema], default: [] },
     pyqData: { type: [PYQChapterSchema], default: [] },
     revisions: { type: [RevisionSchema], default: [] },
     studySessions: { type: [StudySessionSchema], default: [] },
