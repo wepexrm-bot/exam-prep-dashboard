@@ -76,8 +76,10 @@ export default function ScoresPage() {
     e.preventDefault();
     if (!title.trim()) return showToast('Enter a test title');
     if (fScore === '' || totalMarks === '' || accuracy === '') return showToast('Fill in scored, total, and accuracy');
+    const trimmed = title.trim();
+    if (data.dailyScores?.some(s => s.title === trimmed)) return showToast(`"${trimmed}" already exists — use a different title`);
     addScore({
-      date: today(), title: title.trim(),
+      date: today(), title: trimmed,
       score: Number(fScore), totalMarks: Number(totalMarks),
       accuracy: Number(accuracy), hours: 0,
       rank: rank !== '' ? Number(rank) : undefined,

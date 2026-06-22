@@ -161,7 +161,7 @@ export default function DashboardPage() {
   const filteredActivities = filter === 'all' ? activities.slice(0, 6)
     : activities.filter(a => a.type === filter).slice(0, 6);
 
-  const cfg = EXAM_CONFIG[examType as 'GATE' | 'NET'];
+  const cfg = EXAM_CONFIG[examType as keyof typeof EXAM_CONFIG] || EXAM_CONFIG.GATE;
   const displayName = username || 'there';
 
   if (!mounted || loading) {

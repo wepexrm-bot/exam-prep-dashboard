@@ -30,6 +30,28 @@ export const DEFAULT_GATE_SUBJECTS = [
   'Aptitude & Reasoning',
 ];
 
+// ── GOVT Jobs ──────────────────────────────────────────────
+
+export const GOVT_WEIGHTS: Record<string, number> = {
+  'General Awareness': 15,
+  'Quantitative Aptitude': 20,
+  'Reasoning': 20,
+  'English Language': 15,
+  'Computer Knowledge': 10,
+  'Current Affairs': 20,
+};
+
+export const DEFAULT_GOVT_SUBJECTS = [
+  'General Awareness',
+  'Quantitative Aptitude',
+  'Reasoning',
+  'English Language',
+  'Computer Knowledge',
+  'Current Affairs',
+];
+
+export const GOVT_GOAL_TAGS = ['Quant', 'Reasoning', 'English', 'GK', 'Test', 'Revision', 'Other'] as const;
+
 // ── NET English ────────────────────────────────────────────
 
 export const NET_WEIGHTS: Record<string, number> = {
@@ -103,5 +125,14 @@ export const EXAM_CONFIG = {
     tagline: 'English 2026',
     subjects: DEFAULT_NET_SUBJECTS,
     goalTags: NET_GOAL_TAGS,
+  },
+  GOVT: {
+    label: 'Govt Jobs',
+    emoji: '🏛️',
+    color: '#16A34A',
+    colorLight: '#DCFCE7',
+    tagline: 'SSC/Banking 2026',
+    subjects: DEFAULT_GOVT_SUBJECTS,
+    goalTags: GOVT_GOAL_TAGS,
   },
 } as const;

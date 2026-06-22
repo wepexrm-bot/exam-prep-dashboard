@@ -44,13 +44,12 @@ const NAV = [
 ];
 
 export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?: () => void; username?: string; examType: ExamType }) {
-  const examType: ExamType = (examTypeProp === "GATE" || examTypeProp === "NET") ? examTypeProp : "GATE";
   const pathname = usePathname();
   const router = useRouter();
   const { data } = useApp();
   const [streak, setStreak] = useState(0);
   useEffect(() => { setStreak(computeStreak(data)); }, [data]);
-  const cfg = EXAM_CONFIG[examType as keyof typeof EXAM_CONFIG];
+  const cfg = EXAM_CONFIG[examTypeProp as keyof typeof EXAM_CONFIG] || EXAM_CONFIG.GATE;
 
   async function handleLogout() {
     if (!confirm('Sign out?')) return;

@@ -26,6 +26,11 @@ const FALLBACK_CONFIGS: Record<string, ExamConfigData> = {
     tagline: 'English 2026', subjects: [], weights: {},
     goalTags: ['Paper1', 'Paper2', 'Revision', 'Test', 'Reading', 'Writing', 'Other'],
   },
+  GOVT: {
+    examId: 'GOVT', label: 'Govt Jobs', emoji: '🏛️', color: '#16A34A', colorLight: '#DCFCE7',
+    tagline: 'SSC/Banking 2026', subjects: [], weights: {},
+    goalTags: ['Quant', 'Reasoning', 'English', 'GK', 'Test', 'Revision', 'Other'],
+  },
 };
 
 let cachedConfigs: ExamConfigData[] | null = null;
