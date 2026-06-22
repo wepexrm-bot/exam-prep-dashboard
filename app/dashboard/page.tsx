@@ -1,5 +1,5 @@
 'use client';
-import { Grid3X3, Clock, FileText, BarChart3, RefreshCw, Calendar, Flame, Plus, Timer, Layers } from 'lucide-react';
+import { Grid3X3, Clock, FileText, BarChart3, RefreshCw, Calendar, Flame, Plus, Timer, Layers, Target, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Empty } from '@/components/ui';
@@ -17,6 +17,8 @@ const Icon = {
   clock: <Clock size={14} style={{ color: '#22D3EE' }} />,
   flame: <Flame size={20} style={{ fill: '#0F172A', color: '#FB923C' }} />,
   plus: <Plus size={14} style={{ color: '#0F172A' }} />,
+  target: <Target size={14} />,
+  checkCircle: <CheckCircle size={14} />,
 };
 
 function MiniRing({ pct, color }: { pct: number; color: string }) {
@@ -41,7 +43,7 @@ export default function DashboardPage() {
   const [showScore, setShowScore] = useState(false);
 
   const [mounted, setMounted] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'study' | 'pyq' | 'revision'>('all');
+  const [filter, setFilter] = useState<'all' | 'study' | 'pyq' | 'revision' | 'goals'>('all');
   useEffect(() => { setMounted(true); }, []);
 
   const todayKey = today();
@@ -74,7 +76,7 @@ export default function DashboardPage() {
     const d = new Date(sunday);
     d.setDate(sunday.getDate() + i);
     const dKey = dateKey(d);
-    const daySessions = (data.studySessions || []).filter((s: any) => s.start?.startsWith(dKey));
+    const daySessions = (data.studySessions || []).filter((s: any) => s.start ? dateKey(new Date(s.start)) === dKey : false);
     const hrs = daySessions.reduce((a: number, s: any) => a + (s.durationSec || 0), 0) / 3600;
     weekDays.push({
       label: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][i],
@@ -91,7 +93,7 @@ export default function DashboardPage() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(lastSunday); d.setDate(lastSunday.getDate() + i);
       const dKey = dateKey(d);
-      total += (data.studySessions || []).filter((s: any) => s.start?.startsWith(dKey))
+      total += (data.studySessions || []).filter((s: any) => s.start ? dateKey(new Date(s.start)) === dKey : false)
         .reduce((a: number, s: any) => a + (s.durationSec || 0), 0) / 3600;
     }
     return total;
@@ -108,7 +110,7 @@ export default function DashboardPage() {
   for (let day = 1; day <= daysInMonth; day++) {
     const d = new Date(year, month, day);
     const dKey = dateKey(d);
-    const hrs = (data.studySessions || []).filter((s: any) => s.start?.startsWith(dKey))
+    const hrs = (data.studySessions || []).filter((s: any) => s.start ? dateKey(new Date(s.start)) === dKey : false)
       .reduce((a: number, s: any) => a + (s.durationSec || 0), 0) / 3600;
     const hasScore = (data.dailyScores || []).some((s: any) => s.date === dKey);
     const hasPyq = pyqData.some((p: any) => (p.sessions || []).some((s: any) => s.date === dKey));
@@ -124,7 +126,7 @@ export default function DashboardPage() {
   }
   const [hoverHeat, setHoverHeat] = useState<number | null>(null);
 
-  type Activity = { type: 'pyq' | 'study' | 'revision' | 'score'; title: string; sub: string; badge: string; badgeColor: string; badgeBg: string; ts: number };
+  type Activity = { type: 'pyq' | 'study' | 'revision' | 'score' | 'goals'; title: string; sub: string; badge: string; badgeColor: string; badgeBg: string; ts: number };
   const activities: Activity[] = [];
 
   pyqData.forEach((p: any) => {
@@ -155,6 +157,17 @@ export default function DashboardPage() {
       sub: `${r.subject} · ${r.topic}`,
       badge: 'Overdue', badgeColor: '#F87171', badgeBg: 'rgba(248,113,113,0.15)',
       ts: Date.now(),
+    });
+  });
+  (data.goals || []).slice(-5).forEach((g: any) => {
+    activities.push({
+      type: 'goals',
+      title: g.text,
+      sub: g.done ? `Completed · ${g.tag}` : `${g.tag} · ${g.endDate ? `Due ${new Date(g.endDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'In progress'}`,
+      badge: g.done ? 'Done' : 'Pending',
+      badgeColor: g.done ? '#4ADE80' : '#FB923C',
+      badgeBg: g.done ? 'rgba(74,222,128,0.15)' : 'rgba(251,146,60,0.15)',
+      ts: g.endDate ? new Date(g.endDate + 'T00:00:00').getTime() : Date.now(),
     });
   });
   activities.sort((a, b) => b.ts - a.ts);
@@ -236,7 +249,7 @@ export default function DashboardPage() {
           { key: 'all', label: 'All', icon: Icon.all },
           { key: 'study', label: 'Study', icon: Icon.study },
           { key: 'pyq', label: 'PYQ', icon: Icon.pyq },
-
+          { key: 'goals', label: 'Goals', icon: Icon.target },
           { key: 'revision', label: 'Revision', icon: Icon.revision },
         ].map(f => (
           <button key={f.key} onClick={() => setFilter(f.key as any)}
@@ -378,10 +391,10 @@ export default function DashboardPage() {
             <div style={{
               width: 34, height: 34, borderRadius: 10, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: a.type === 'pyq' ? 'rgba(167,139,250,0.15)' : a.type === 'study' ? 'rgba(34,211,238,0.15)' : 'rgba(248,113,113,0.15)',
+              background: a.type === 'pyq' ? 'rgba(167,139,250,0.15)' : a.type === 'study' ? 'rgba(34,211,238,0.15)' : a.type === 'goals' ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
             }}>
-              <span style={{ width: 16, height: 16, display: 'inline-flex', color: a.type === 'pyq' ? '#A78BFA' : a.type === 'study' ? '#22D3EE' : '#F87171' }}>
-                {a.type === 'pyq' ? Icon.pyq : a.type === 'study' ? Icon.clock : Icon.revision}
+              <span style={{ width: 16, height: 16, display: 'inline-flex', color: a.type === 'pyq' ? '#A78BFA' : a.type === 'study' ? '#22D3EE' : a.type === 'goals' ? '#4ADE80' : '#F87171' }}>
+                {a.type === 'pyq' ? Icon.pyq : a.type === 'study' ? Icon.clock : a.type === 'goals' ? Icon.target : Icon.revision}
               </span>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>

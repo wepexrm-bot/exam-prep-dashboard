@@ -88,7 +88,7 @@ export function NotificationManager() {
         }
 
         const hasScoreToday = (data.dailyScores || []).some(s => s.date === today);
-        const hasStudyToday = (data.studySessions || []).some(s => s.start?.startsWith(today));
+        const hasStudyToday = (data.studySessions || []).some(s => s.start ? dateKey(new Date(s.start)) === today : false);
         const hasPYQToday = (data.pyqData || []).some(p =>
           (p.sessions || []).some(s => s.date === today)
         );

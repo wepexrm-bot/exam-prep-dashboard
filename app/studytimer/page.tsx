@@ -27,9 +27,25 @@ export default function StudyTimerPage() {
   const startRef = useRef<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  useEffect(() => {
+    function saveOnUnload() {
+      try {
+        const raw = localStorage.getItem('gate_timer_v2');
+        if (!raw) return;
+        const ts = JSON.parse(raw);
+        if (running && !paused && startRef.current) {
+          const cur = pausedAt + Math.floor((Date.now() - startRef.current.getTime()) / 1000);
+          localStorage.setItem('gate_timer_v2', JSON.stringify({ ...ts, elapsed: cur }));
+        }
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('beforeunload', saveOnUnload);
+    return () => window.removeEventListener('beforeunload', saveOnUnload);
+  }, [running, paused, pausedAt]);
+
   const todayKey = today();
   const todaySessions: StudySession[] = (data.studySessions || []).filter(
-    s => s.start?.split('T')[0] === todayKey
+    s => s.start ? dateKey(new Date(s.start)) === todayKey : false
   );
   const totalTodaySec = todaySessions.reduce((a, s) => a + s.durationSec, 0);
   const hoursToday = Math.round(totalTodaySec / 3600 * 10) / 10;
@@ -40,13 +56,15 @@ export default function StudyTimerPage() {
     if (!raw) return;
     try {
       const ts = JSON.parse(raw);
-      if (!ts.startedAt || ts.startedAt.split('T')[0] !== todayKey) return;
+      if (!ts.startedAt) return;
       startRef.current = new Date(ts.startedAt);
       if (ts.paused) {
         setRunning(true); setPaused(true);
         setPausedAt(ts.pausedAt); setElapsed(ts.pausedAt);
       } else {
-        const recovered = ts.pausedAt + Math.floor((Date.now() - new Date(ts.startedAt).getTime()) / 1000);
+        const recovered = typeof ts.elapsed === 'number'
+          ? ts.elapsed
+          : ts.pausedAt + Math.floor((Date.now() - new Date(ts.startedAt).getTime()) / 1000);
         setPausedAt(ts.pausedAt); setElapsed(recovered);
         setRunning(true); setPaused(false);
       }
@@ -60,7 +78,12 @@ export default function StudyTimerPage() {
       const base = pausedAt;
       const startTime = startRef.current!.getTime();
       intervalRef.current = setInterval(() => {
-        setElapsed(base + Math.floor((Date.now() - startTime) / 1000));
+        const next = base + Math.floor((Date.now() - startTime) / 1000);
+        setElapsed(next);
+        localStorage.setItem('gate_timer_v2', JSON.stringify({
+          startedAt: startRef.current!.toISOString(),
+          pausedAt: base, paused: false, running: true, elapsed: next,
+        }));
       }, 1000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
