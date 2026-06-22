@@ -5,6 +5,7 @@ import { Play, Pause, Square, Clock, BarChart3, Trophy, PartyPopper } from 'luci
 import { Empty, showToast } from '@/components/ui';
 import { formatSeconds, dateKey } from '@/lib/utils';
 import { StudySession } from '@/lib/types';
+import { TimerService } from '@/lib/capacitor/timer-service';
 
 function today() { return dateKey(new Date()); }
 
@@ -26,6 +27,9 @@ export default function StudyTimerPage() {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const startRef = useRef<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
+  const runningRef = useRef(false);
+  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
 
   const todayKey = today();
   const todaySessions: StudySession[] = (data.studySessions || []).filter(
@@ -36,6 +40,53 @@ export default function StudyTimerPage() {
   const dailyTarget = 6;
 
   useEffect(() => {
+    TimerService.addListener('timerStopped', async () => {
+      const cur = elapsedRef.current;
+      if (cur > 60) {
+        const session: StudySession = {
+          start: startRef.current?.toISOString() || new Date().toISOString(),
+          end: new Date().toISOString(),
+          durationSec: cur,
+        };
+        await addStudySession(session);
+        showToast(`Session saved: ${formatSeconds(cur)}`);
+      }
+      localStorage.removeItem('gate_timer_v2');
+      setRunning(false); setPaused(false); setElapsed(0); setPausedAt(0);
+      startRef.current = null;
+    });
+
+    TimerService.addListener('newSessionRequested', async () => {
+      if (runningRef.current) {
+        const cur = elapsedRef.current;
+        if (cur > 60) {
+          const session: StudySession = {
+            start: startRef.current?.toISOString() || new Date().toISOString(),
+            end: new Date().toISOString(),
+            durationSec: cur,
+          };
+          await addStudySession(session);
+        }
+      }
+      localStorage.removeItem('gate_timer_v2');
+      setRunning(false); setPaused(false); setElapsed(0); setPausedAt(0);
+      startRef.current = null;
+      handleStart();
+    });
+
+    if (isCapacitor) {
+      TimerService.getTimerState().then(state => {
+        if (state.running) {
+          startRef.current = new Date(Date.now() - state.elapsed * 1000);
+          setRunning(true);
+          setPaused(state.paused);
+          setElapsed(state.elapsed);
+          elapsedRef.current = state.elapsed;
+          if (state.paused) setPausedAt(state.elapsed);
+        }
+      });
+    }
+
     const raw = localStorage.getItem('gate_timer_v2');
     if (!raw) return;
     try {
@@ -55,18 +106,31 @@ export default function StudyTimerPage() {
   }, []);
 
   useEffect(() => {
+    if (isCapacitor) return;
     if (running && !paused) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       const base = pausedAt;
       const startTime = startRef.current!.getTime();
       intervalRef.current = setInterval(() => {
-        setElapsed(base + Math.floor((Date.now() - startTime) / 1000));
+        const next = base + Math.floor((Date.now() - startTime) / 1000);
+        setElapsed(next);
+        elapsedRef.current = next;
       }, 1000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running, paused, pausedAt]);
+  }, [running, paused, pausedAt, isCapacitor]);
+
+  useEffect(() => { runningRef.current = running; }, [running]);
+
+  useEffect(() => {
+    if (!isCapacitor) return;
+    TimerService.addListener('timerTick', (data: any) => {
+      setElapsed(data.elapsed);
+      elapsedRef.current = data.elapsed;
+    });
+  }, [isCapacitor]);
 
   function saveState(extra: object) {
     localStorage.setItem('gate_timer_v2', JSON.stringify({
@@ -81,11 +145,13 @@ export default function StudyTimerPage() {
       startRef.current = new Date();
       setPaused(false);
       saveState({ paused: false, startedAt: new Date().toISOString(), pausedAt });
+      TimerService.resumeTimer();
       return;
     }
     startRef.current = new Date();
     setRunning(true); setPaused(false); setPausedAt(0); setElapsed(0);
     saveState({ running: true, paused: false, startedAt: startRef.current.toISOString(), pausedAt: 0 });
+    TimerService.startTimer(0);
   }
 
   function handlePause() {
@@ -93,6 +159,7 @@ export default function StudyTimerPage() {
     const now = pausedAt + Math.floor((Date.now() - startRef.current!.getTime()) / 1000);
     setPausedAt(now); setElapsed(now); setPaused(true);
     saveState({ paused: true, pausedAt: now });
+    TimerService.pauseTimer();
   }
 
   async function handleStop() {
@@ -113,6 +180,7 @@ export default function StudyTimerPage() {
     localStorage.removeItem('gate_timer_v2');
     setRunning(false); setPaused(false); setElapsed(0); setPausedAt(0);
     startRef.current = null;
+    await TimerService.stopTimer();
   }
 
   const sessions = data.studySessions || [];
