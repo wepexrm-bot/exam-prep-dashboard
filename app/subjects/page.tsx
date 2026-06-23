@@ -132,10 +132,10 @@ export default function SubjectsPage() {
 
             <div style={{ padding: '14px 16px' }}>
               <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: 'pointer', userSelect: 'none', gap: 10,
+                display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+                cursor: 'pointer', userSelect: 'none', gap: 8, flexWrap: 'wrap',
               }} onClick={() => setOpenSubj(prev => ({ ...prev, [si]: !prev[si] }))}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: '1 1 140px' }}>
                   <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {subj.name}
                   </span>
@@ -150,11 +150,11 @@ export default function SubjectsPage() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  <div style={{ textAlign: 'right', minWidth: 40 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color }}>{pct}<span style={{ fontSize: 10, fontWeight: 500, color: 'var(--muted)' }}>%</span></span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <div style={{ textAlign: 'right', minWidth: 30 }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color }}>{pct}<span style={{ fontSize: 9, fontWeight: 500, color: 'var(--muted)' }}>%</span></span>
                   </div>
-                  <div style={{ width: 72, height: 6, borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
+                  <div style={{ width: 56, height: 5, borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', borderRadius: 99,
                       width: `${pct}%`,
@@ -166,7 +166,7 @@ export default function SubjectsPage() {
                   <button
                     onClick={e => { e.stopPropagation(); if (confirm(`Delete "${subj.name}"? Also removes chapters and PYQ data.`)) deleteSubject(si); }}
                     style={{
-                      width: 24, height: 24, borderRadius: 8, flexShrink: 0,
+                      width: 22, height: 22, borderRadius: 6, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'none', border: 'none', color: '#555',
                       cursor: 'pointer', transition: 'all 0.15s',
@@ -174,17 +174,17 @@ export default function SubjectsPage() {
                     onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.background = 'none'; }}
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={11} />
                   </button>
                   <div style={{
-                    width: 24, height: 24, borderRadius: 8,
+                    width: 22, height: 22, borderRadius: 6,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'var(--muted)', flexShrink: 0,
                     transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
                     transition: 'transform 0.25s ease',
                     background: 'rgba(255,255,255,0.04)',
                   }}>
-                    <ChevronDown size={14} />
+                    <ChevronDown size={13} />
                   </div>
                 </div>
               </div>
