@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Plus, Book, Check, Pencil, Trash2, ChevronDown } from 'lucide-react';
-import { PageHeader, Card, MetricCard, Empty, Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
+import { Plus, Book, Check, Pencil, Trash2, ChevronDown, Target, Layers, Gauge } from 'lucide-react';
+import { Empty, Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { SUB_COLORS } from '@/lib/constants';
 import { getPct } from '@/lib/utils';
 
@@ -50,26 +50,63 @@ export default function SubjectsPage() {
   }
 
   return (
-    <>
-      <PageHeader title="Subject Progress" sub="Tick chapters to auto-update completion %">
-        <button className="btn btn-primary" onClick={() => setShowAddSubj(true)}><Plus size={14} /> Add subject</button>
-      </PageHeader>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 12 }}>
+      <style>{`
+        @keyframes subjFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes chRowIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+      `}</style>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-5">
-        <MetricCard label="Overall avg" value={<>{avg}<sup className="text-sm font-normal" style={{ color: 'var(--muted)' }}>%</sup></>} />
-        <MetricCard label="Chapters done" value={<>{doneCh}<sup className="text-sm font-normal" style={{ color: 'var(--muted)' }}>/{totalCh}</sup></>} />
-        <MetricCard label="Strong (≥80%)" value={<span style={{ color: 'var(--success)' }}>{strong}</span>} />
-        <MetricCard label="Needs work" value={<span style={{ color: weak > 0 ? 'var(--danger)' : 'var(--success)' }}>{weak}</span>} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>Subject Progress</h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 0' }}>
+            Tick chapters to auto-update completion %
+          </p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowAddSubj(true)} style={{ flexShrink: 0, fontSize: 12 }}>
+          <Plus size={14} /> Add subject
+        </button>
+      </div>
+
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 8,
+      }}>
+        {[
+          { label: 'Overall Avg', value: `${avg}%`, icon: <Gauge size={14} />, color: '#22D3EE' },
+          { label: 'Chapters Done', value: `${doneCh}/${totalCh}`, icon: <Layers size={14} />, color: '#4ADE80' },
+          { label: 'Strong (≥80%)', value: String(strong), icon: <Check size={14} />, color: strong > 0 ? '#4ADE80' : 'var(--muted)' },
+          { label: 'Needs Work', value: String(weak), icon: <Target size={14} />, color: weak > 0 ? '#F87171' : '#4ADE80' },
+        ].map((m, i) => (
+          <div key={i} className="stat-card" style={{ gap: 6 }}>
+            <div style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 12, height: 12, display: 'inline-flex', color: m.color }}>{m.icon}</span>
+              {m.label}
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: m.color }}>{m.value}</div>
+          </div>
+        ))}
       </div>
 
       {subjects.length === 0 && (
-        <Card className="text-center py-10">
-          <div className="flex justify-center mb-3"><Book size={40} strokeWidth={1.5} style={{ color: 'var(--muted)' }} /></div>
-          <div className="font-semibold text-[15px] mb-1" style={{ color: 'var(--text)' }}>No subjects yet</div>
-          <div className="text-[13px] mb-5" style={{ color: 'var(--muted)' }}>Add your GATE subjects to start tracking chapter completion</div>
-          <button className="btn btn-primary" onClick={() => setShowAddSubj(true)}><Plus size={14} /> Add your first subject</button>
-        </Card>
+        <div className="panel" style={{ textAlign: 'center', padding: '40px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 16,
+              background: 'rgba(34,211,238,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22D3EE',
+            }}>
+              <Book size={22} strokeWidth={1.5} />
+            </div>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6 }}>No subjects yet</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>
+            Add your first subject to start tracking chapter completion
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowAddSubj(true)}>
+            <Plus size={14} /> Add your first subject
+          </button>
+        </div>
       )}
 
       {subjects.map((subj, si) => {
@@ -77,82 +114,183 @@ export default function SubjectsPage() {
         const isOpen = openSubj[si];
         const color = SUB_COLORS[si % SUB_COLORS.length];
         const doneC = (subj.chapters || []).filter(c => c.done).length;
-        const statusBadge = pct >= 80
-          ? <span className="badge badge-green">Strong</span>
-          : pct >= 50
-          ? <span className="badge badge-amber">In progress</span>
-          : <span className="badge badge-red">Needs work</span>;
+        const totalC = subj.chapters.length;
+        const statusText = pct >= 80 ? 'Strong' : pct >= 50 ? 'In progress' : 'Needs work';
+        const statusColor = pct >= 80 ? '#4ADE80' : pct >= 50 ? '#FB923C' : '#F87171';
+        const glowColor = pct >= 80 ? 'rgba(74,222,128,0.35)' : 'rgba(251,146,60,0.3)';
 
         return (
-          <Card key={si} className="mb-2.5">
-            {/* Subject header */}
-            <div className="flex items-center justify-between cursor-pointer select-none"
-              onClick={() => setOpenSubj(prev => ({ ...prev, [si]: !prev[si] }))}>
-              <span className="font-medium text-[14px]" style={{ color: 'var(--text)' }}>{subj.name}</span>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                {statusBadge}
-                <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
-                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
-                </div>
-                <span className="text-xs font-semibold w-9 text-right" style={{ color }}>{pct}%</span>
-                <button
-                  onClick={e => { e.stopPropagation(); if (confirm(`Delete "${subj.name}"? Also removes chapters and PYQ data.`)) deleteSubject(si); }}
-                  className="text-[11px] px-2 py-0.5 rounded-sm border transition-all flex items-center gap-1"
-                  style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <Trash2 size={11} /> Delete
-                </button>
-                <span className="text-xs transition-transform duration-200 inline-block" style={{ color: 'var(--muted)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}><ChevronDown size={14} /></span>
-              </div>
-            </div>
+          <div key={si} className="panel" style={{
+            padding: 0, overflow: 'hidden',
+            animation: `subjFadeIn 0.35s ease ${si * 0.06}s both`,
+          }}>
+            <div style={{
+              height: 3, width: '100%',
+              background: `linear-gradient(90deg, ${color}, ${color}66)`,
+              boxShadow: `0 0 12px ${color}66`,
+            }} />
 
-            {/* Chapter body */}
-            {isOpen && (
-              <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
-                    Chapters ({doneC}/{subj.chapters.length} done)
+            <div style={{ padding: '14px 16px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', userSelect: 'none', gap: 10,
+              }} onClick={() => setOpenSubj(prev => ({ ...prev, [si]: !prev[si] }))}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {subj.name}
                   </span>
-                          <button className="btn btn-sm btn-primary" onClick={() => { setShowAddCh(si); setNewChName(''); }}><Plus size={12} /> Add chapter</button>
+                  {totalC > 0 && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99,
+                      background: statusColor + '1A', color: statusColor, whiteSpace: 'nowrap',
+                      border: `1px solid ${statusColor}33`,
+                    }}>
+                      {statusText}
+                    </span>
+                  )}
                 </div>
-                {subj.chapters.length === 0 && <Empty>No chapters yet — add your first one above</Empty>}
-                <div className="flex flex-col gap-0.5">
-                  {subj.chapters.map((ch, ci) => (
-                    <div key={ci}
-                      className="flex items-center gap-2.5 px-1 py-1.5 rounded-btn cursor-pointer group hover:bg-[var(--surface2)] transition-colors">
-                      <div
-                        onClick={() => toggleChapter(si, ci)}
-                        className="w-4.5 h-4.5 rounded flex-shrink-0 flex items-center justify-center text-[10px] text-white transition-all cursor-pointer"
-                        style={{ border: ch.done ? 'none' : '1.5px solid var(--border)', background: ch.done ? '#16A34A' : 'transparent' }}>
-                        {ch.done && <Check size={10} strokeWidth={3} style={{ color: '#0F172A' }} />}
-                      </div>
-                      <span
-                        onClick={() => toggleChapter(si, ci)}
-                        className="flex-1 text-[13px]"
-                        style={ch.done ? { textDecoration: 'line-through', color: 'var(--muted)' } : { color: 'var(--text)' }}>
-                        {ch.name}
-                      </span>
-                      <button
-                        onClick={() => handleRenameCh(si, ci)}
-                        className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border transition-all flex items-center gap-1"
-                        style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <Pencil size={10} /> Rename
-                      </button>
-                      <button
-                        onClick={() => { if (confirm('Remove chapter?')) deleteChapter(si, ci); }}
-                        className="opacity-0 group-hover:opacity-100 text-[11px] px-2 py-0.5 rounded border transition-all flex items-center gap-1"
-                        style={{ background: 'none', borderColor: 'var(--border)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  ))}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <div style={{ textAlign: 'right', minWidth: 40 }}>
+                    <span style={{ fontSize: 16, fontWeight: 800, color }}>{pct}<span style={{ fontSize: 10, fontWeight: 500, color: 'var(--muted)' }}>%</span></span>
+                  </div>
+                  <div style={{ width: 72, height: 6, borderRadius: 99, background: 'var(--surface2)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 99,
+                      width: `${pct}%`,
+                      background: `linear-gradient(90deg, ${color}, ${color}bb)`,
+                      boxShadow: `0 0 8px ${glowColor}`,
+                      transition: 'width 0.6s ease',
+                    }} />
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); if (confirm(`Delete "${subj.name}"? Also removes chapters and PYQ data.`)) deleteSubject(si); }}
+                    style={{
+                      width: 24, height: 24, borderRadius: 8, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'none', border: 'none', color: '#555',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.background = 'none'; }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--muted)', flexShrink: 0,
+                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
+                    transition: 'transform 0.25s ease',
+                    background: 'rgba(255,255,255,0.04)',
+                  }}>
+                    <ChevronDown size={14} />
+                  </div>
                 </div>
               </div>
-            )}
-          </Card>
+
+              {totalC > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--muted)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Layers size={11} />
+                    {doneC}/{totalC} chapters
+                  </span>
+                </div>
+              )}
+
+              {isOpen && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
+                      Chapters
+                    </span>
+                    <button
+                      className="btn btn-primary"
+                      style={{ fontSize: 11, padding: '5px 12px', gap: 5 }}
+                      onClick={() => { setShowAddCh(si); setNewChName(''); }}
+                    >
+                      <Plus size={11} /> Add chapter
+                    </button>
+                  </div>
+
+                  {subj.chapters.length === 0 && <Empty>No chapters yet — add your first one</Empty>}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {subj.chapters.map((ch, ci) => (
+                      <div key={ci} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 10px', borderRadius: 12,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        animation: `chRowIn 0.25s ease ${ci * 0.03}s both`,
+                      }}
+                        className="group"
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface2)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                      >
+                        <div
+                          onClick={() => toggleChapter(si, ci)}
+                          style={{
+                            width: 20, height: 20, borderRadius: 7, flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                            background: ch.done ? '#4ADE80' : 'transparent',
+                            border: ch.done ? 'none' : '1.5px solid var(--border)',
+                            boxShadow: ch.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
+                          }}
+                        >
+                          {ch.done && <Check size={10} strokeWidth={3} style={{ color: '#0F172A' }} />}
+                        </div>
+
+                        <span
+                          onClick={() => toggleChapter(si, ci)}
+                          style={{
+                            flex: 1, fontSize: 13, minWidth: 0,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            color: ch.done ? 'var(--muted)' : '#fff',
+                            textDecoration: ch.done ? 'line-through' : 'none',
+                          }}
+                        >
+                          {ch.name}
+                        </span>
+
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          <button
+                            onClick={() => handleRenameCh(si, ci)}
+                            style={{
+                              background: 'none', border: '1px solid var(--border)', color: 'var(--muted)',
+                              cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                              padding: '3px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4,
+                              transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface2)'; e.currentTarget.style.color = '#fff'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; e.currentTarget.style.color = 'var(--muted)'; }}
+                          >
+                            <Pencil size={10} /> Rename
+                          </button>
+                          <button
+                            onClick={() => { if (confirm('Remove chapter?')) deleteChapter(si, ci); }}
+                            style={{
+                              background: 'none', border: '1px solid var(--border)', color: 'var(--muted)',
+                              cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                              padding: '3px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4,
+                              transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.1)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.3)'; e.currentTarget.style.color = '#F87171'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         );
       })}
 
-      {/* Add Subject Modal */}
       <Modal open={showAddSubj} onClose={() => setShowAddSubj(false)} title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Book size={16} /> Add Subject</span>}>
         <FormGroup label="Subject name">
           <input className="form-input" type="text" placeholder="e.g. Operating Systems" value={newSubjName}
@@ -164,7 +302,6 @@ export default function SubjectsPage() {
         </ModalActions>
       </Modal>
 
-      {/* Add Chapter Modal */}
       <Modal open={showAddCh !== null} onClose={() => setShowAddCh(null)}
         title={showAddCh !== null ? `Add chapter to ${subjects[showAddCh]?.name}` : 'Add chapter'}>
         <FormGroup label="Chapter name">
@@ -176,6 +313,6 @@ export default function SubjectsPage() {
           <button className="btn btn-primary" onClick={handleAddChapter}>Add chapter</button>
         </ModalActions>
       </Modal>
-    </>
+    </div>
   );
 }
