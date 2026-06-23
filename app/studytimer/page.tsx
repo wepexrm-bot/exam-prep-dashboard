@@ -144,7 +144,7 @@ export default function StudyTimerPage() {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dKey = dateKey(d);
-    const daySessions = sessions.filter(s => s.start?.startsWith(dKey));
+    const daySessions = sessions.filter(s => s.start ? dateKey(new Date(s.start)) === dKey : false);
     const hrs = daySessions.reduce((a, s) => a + s.durationSec, 0) / 3600;
     last14.push({ date: dKey, hours: Math.round(hrs * 10) / 10, sessions: daySessions.length });
   }
@@ -152,7 +152,7 @@ export default function StudyTimerPage() {
 
   const dayTotals: Record<string, number> = {};
   sessions.forEach(s => {
-    const day = s.start?.split('T')[0];
+    const day = s.start ? dateKey(new Date(s.start)) : '';
     if (day) dayTotals[day] = (dayTotals[day] || 0) + s.durationSec / 3600;
   });
   const allDays = Object.values(dayTotals);
