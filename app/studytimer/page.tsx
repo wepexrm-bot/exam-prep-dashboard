@@ -250,7 +250,7 @@ export default function StudyTimerPage() {
 
         {todaySessions.length === 0 && <Empty>No sessions today. Start the timer!</Empty>}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 190, overflowY: 'auto' }}>
           {todaySessions.map((s, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10,

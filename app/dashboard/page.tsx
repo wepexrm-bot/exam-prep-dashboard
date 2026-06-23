@@ -34,17 +34,11 @@ function MiniRing({ pct, color }: { pct: number; color: string }) {
   );
 }
 
-function Skeleton({ w = '100%', h = 18, radius = 8 }: { w?: string | number; h?: number; radius?: number }) {
-  return <div style={{ width: w, height: h, borderRadius: radius, background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.6s ease-in-out infinite' }} />;
-}
-
 export default function DashboardPage() {
-  const { data, loading, examType, username } = useApp() as any;
+  const { data, examType, username } = useApp() as any;
   const [showScore, setShowScore] = useState(false);
 
-  const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState<'all' | 'study' | 'pyq' | 'revision' | 'goals'>('all');
-  useEffect(() => { setMounted(true); }, []);
 
   const todayKey = today();
   const goals = (data.goals || []).filter((g: any) => {
@@ -177,22 +171,8 @@ export default function DashboardPage() {
   const cfg = EXAM_CONFIG[examType as keyof typeof EXAM_CONFIG] || EXAM_CONFIG.GATE;
   const displayName = username || 'there';
 
-  if (!mounted || loading) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Skeleton w={180} h={32} /><Skeleton w={42} h={42} radius={99} />
-        </div>
-        <Skeleton w="100%" h={90} radius={16} />
-        <Skeleton w="100%" h={240} radius={18} />
-      </div>
-    );
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 12, width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
         <div style={{ minWidth: 0, flex: 1 }}>

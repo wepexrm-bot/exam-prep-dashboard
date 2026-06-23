@@ -106,35 +106,22 @@ export function AppProvider({
     weeklyTarget: 12,
   };
 
+  const CACHE_KEY = 'gate_data_cache';
   const [data, setData] = useState<AppData>(defaultData);
   const [loading, setLoading] = useState(true);
   const dataRef = useRef(data);
   dataRef.current = data;
-
-  // ── Debounced sync to server ──────────────────────────────────
-  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const syncVersionRef = useRef(0);
-
-  useEffect(() => {
-    if (loading) return;
-    syncVersionRef.current++;
-    const version = syncVersionRef.current;
-    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(async () => {
-      if (version !== syncVersionRef.current) return;
-      try {
-        await apiCall('POST', '/api/data', dataRef.current);
-      } catch {
-        showErrorToast('Failed to save data to server');
-      }
-    }, 600);
-    return () => {
-      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    };
-  }, [data, loading]);
+  const cacheLoadedRef = useRef(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    if (typeof window !== 'undefined' && !cacheLoadedRef.current) {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) setData(JSON.parse(cached));
+      } catch { /* ignore */ }
+      cacheLoadedRef.current = true;
+    }
     try {
       const d = await apiCall('GET', '/api/data');
       const rawGoals: Goal[] = (d.goals || []).map((g: Goal) => ({ ...g, date: g.date || todayLocal() }));
@@ -149,7 +136,7 @@ export function AppProvider({
         carryoverGoals.push({ ...g, id: nextId++, date: todayK, done: false });
       });
       const goals = [...rawGoals, ...carryoverGoals];
-      setData({
+      const fresh = {
         goals,
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
         dailyScores: d.dailyScores || [],
@@ -158,7 +145,9 @@ export function AppProvider({
         studySessions: d.studySessions || [],
         weeklyTarget: d.weeklyTarget || 12,
         lastUpdated: d.lastUpdated,
-      });
+      };
+      setData(fresh);
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch { /* ignore */ }
     } catch (e) {
       showErrorToast('Failed to load data from server');
     } finally { setLoading(false); }
@@ -177,6 +166,7 @@ export function AppProvider({
 
   const toggleGoal = useCallback(async (id: number) => {
     mutate(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, done: !g.done } : g) }));
+    apiCall('POST', '/api/data', { goals: dataRef.current.goals }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const addGoal = useCallback(async (goal: Omit<Goal, 'id'>) => {
@@ -184,22 +174,27 @@ export function AppProvider({
       const newId = Math.max(0, ...prev.goals.map(g => g.id)) + 1;
       return { ...prev, goals: [...prev.goals, { ...goal, id: newId }] };
     });
+    apiCall('POST', '/api/data', { goals: dataRef.current.goals }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const updateGoal = useCallback(async (id: number, patch: Partial<Omit<Goal, 'id'>>) => {
     mutate(prev => ({ ...prev, goals: prev.goals.map(g => g.id === id ? { ...g, ...patch } : g) }));
+    apiCall('POST', '/api/data', { goals: dataRef.current.goals }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const deleteGoal = useCallback(async (id: number) => {
     mutate(prev => ({ ...prev, goals: prev.goals.filter(g => g.id !== id) }));
+    apiCall('POST', '/api/data', { goals: dataRef.current.goals }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const clearDoneGoals = useCallback(async () => {
     mutate(prev => ({ ...prev, goals: prev.goals.filter(g => !g.done) }));
+    apiCall('POST', '/api/data', { goals: dataRef.current.goals }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const clearAllGoals = useCallback(async () => {
     mutate(prev => ({ ...prev, goals: [] }));
+    apiCall('POST', '/api/data', { goals: dataRef.current.goals }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const addScore = useCallback(async (score: DailyScore) => {
@@ -231,6 +226,7 @@ export function AppProvider({
         : [...prev.pyqData, { key, total, sessions: [session] }];
       return { ...prev, pyqData };
     });
+    apiCall('POST', '/api/data', { pyqData: dataRef.current.pyqData }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const deletePYQSession = useCallback(async (key: string, idx: number) => {
@@ -239,10 +235,12 @@ export function AppProvider({
       pyqData: prev.pyqData.map(p => p.key === key
         ? { ...p, sessions: p.sessions.filter((_, i) => i !== idx) } : p),
     }));
+    apiCall('POST', '/api/data', { pyqData: dataRef.current.pyqData }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const addRevision = useCallback(async (rev: Omit<Revision, 'lastRevised'>) => {
     mutate(prev => ({ ...prev, revisions: [...prev.revisions, { ...rev, lastRevised: todayLocal() }] }));
+    apiCall('POST', '/api/data', { revisions: dataRef.current.revisions }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const markRevised = useCallback(async (idx: number) => {
@@ -250,14 +248,17 @@ export function AppProvider({
       ...prev,
       revisions: prev.revisions.map((r, i) => i === idx ? { ...r, lastRevised: todayLocal() } : r),
     }));
+    apiCall('POST', '/api/data', { revisions: dataRef.current.revisions }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const deleteRevision = useCallback(async (idx: number) => {
     mutate(prev => ({ ...prev, revisions: prev.revisions.filter((_, i) => i !== idx) }));
+    apiCall('POST', '/api/data', { revisions: dataRef.current.revisions }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const addSubject = useCallback(async (name: string) => {
     mutate(prev => ({ ...prev, subjects: [...prev.subjects, { name, pct: 0, completed: false, chapters: [] }] }));
+    apiCall('POST', '/api/data', { subjects: dataRef.current.subjects }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const deleteSubject = useCallback(async (idx: number) => {
@@ -269,6 +270,7 @@ export function AppProvider({
         pyqData: prev.pyqData.filter(p => !p.key.startsWith(subj.name + '::')),
       };
     });
+    apiCall('POST', '/api/data', { subjects: dataRef.current.subjects, pyqData: dataRef.current.pyqData }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const addChapter = useCallback(async (si: number, name: string) => {
@@ -277,6 +279,7 @@ export function AppProvider({
       subjects: prev.subjects.map((s, i) =>
         i === si ? { ...s, chapters: [...s.chapters, { name, done: false }] } : s),
     }));
+    apiCall('POST', '/api/data', { subjects: dataRef.current.subjects }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const toggleChapter = useCallback(async (si: number, ci: number) => {
@@ -288,6 +291,7 @@ export function AppProvider({
         return { ...s, chapters, pct: Math.round(chapters.filter(c => c.done).length / chapters.length * 100) };
       }),
     }));
+    apiCall('POST', '/api/data', { subjects: dataRef.current.subjects }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const deleteChapter = useCallback(async (si: number, ci: number) => {
@@ -304,6 +308,7 @@ export function AppProvider({
         pyqData: prev.pyqData.filter(p => p.key !== key),
       };
     });
+    apiCall('POST', '/api/data', { subjects: dataRef.current.subjects, pyqData: dataRef.current.pyqData }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const renameChapter = useCallback(async (si: number, ci: number, newName: string) => {
@@ -318,6 +323,7 @@ export function AppProvider({
         pyqData: prev.pyqData.map(p => p.key === oldKey ? { ...p, key: newKey } : p),
       };
     });
+    apiCall('POST', '/api/data', { subjects: dataRef.current.subjects, pyqData: dataRef.current.pyqData }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   const addStudySession = useCallback(async (session: StudySession) => {
@@ -330,6 +336,7 @@ export function AppProvider({
 
   const setWeeklyTarget = useCallback(async (n: number) => {
     mutate(prev => ({ ...prev, weeklyTarget: n }));
+    apiCall('POST', '/api/data', { weeklyTarget: dataRef.current.weeklyTarget }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
   return (
