@@ -59,8 +59,9 @@ export function NotificationManager() {
       const cap = window.Capacitor;
       console.log('[NotificationManager] Capacitor:', !!cap, 'isNativePlatform:', typeof cap?.isNativePlatform, 'cancelled:', cancelled);
       if (cap) console.log('[NotificationManager] Plugins keys:', Object.keys(cap.Plugins || {}));
-      if (!cap?.isNativePlatform?.() || cancelled) {
-        console.log('[NotificationManager] Not running — no Capacitor or LocalNotifications plugin');
+      const isNative = cap?.isNativePlatform ? cap.isNativePlatform() : !!cap;
+      if (!isNative || cancelled) {
+        console.log('[NotificationManager] Not running — not a native platform');
         return;
       }
 
