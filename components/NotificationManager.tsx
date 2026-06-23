@@ -2,6 +2,7 @@
 import { Repeat, Flame, Calendar, PartyPopper, Flag } from 'lucide-react';
 import { useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import { LocalNotifications, LocalNotificationSchema } from '@capacitor/local-notifications';
 
 declare global {
   interface Window {
@@ -20,8 +21,7 @@ declare global {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NotificationItem = Record<string, any>;
+type NotificationItem = LocalNotificationSchema;
 
 const NOTIF_IDS = {
   REVISION: 1001,
@@ -56,16 +56,18 @@ export function NotificationManager() {
         tries++;
       }
 
-      const LN = window.Capacitor?.Plugins?.LocalNotifications;
-      if (!window.Capacitor?.isNativePlatform?.() || !LN || cancelled) return;
+      if (!window.Capacitor?.isNativePlatform?.() || cancelled) {
+        console.log('[NotificationManager] Not running — no Capacitor or LocalNotifications plugin');
+        return;
+      }
 
       try {
-        const perm = await LN.checkPermissions();
+        const perm = await LocalNotifications.checkPermissions();
         if (perm.display !== 'granted') {
-          await LN.requestPermissions();
+          await LocalNotifications.requestPermissions();
         }
 
-        await LN.cancel({
+        await LocalNotifications.cancel({
           notifications: Object.values(NOTIF_IDS).map(id => ({ id })),
         });
 
@@ -150,7 +152,10 @@ export function NotificationManager() {
         }
 
         if (notifications.length > 0) {
-          await LN.schedule({ notifications });
+          await LocalNotifications.schedule({ notifications });
+          console.log(`[NotificationManager] Scheduled ${notifications.length} notification(s):`, notifications.map(n => n.title));
+        } else {
+          console.log('[NotificationManager] No notifications to schedule');
         }
       } catch (err) {
         console.error('NotificationManager error:', err);
