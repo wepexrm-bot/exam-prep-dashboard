@@ -51,19 +51,12 @@ export function NotificationManager() {
       if (typeof window === 'undefined') return;
 
       let tries = 0;
-      while (!window.Capacitor?.isNativePlatform?.() && tries < 20) {
+      while (!window.Capacitor && tries < 20) {
         await new Promise(r => setTimeout(r, 100));
         tries++;
       }
 
-      const cap = window.Capacitor;
-      console.log('[NotificationManager] Capacitor:', !!cap, 'isNativePlatform:', typeof cap?.isNativePlatform, 'cancelled:', cancelled);
-      if (cap) console.log('[NotificationManager] Plugins keys:', Object.keys(cap.Plugins || {}));
-      const isNative = cap?.isNativePlatform ? cap.isNativePlatform() : !!cap;
-      if (!isNative || cancelled) {
-        console.log('[NotificationManager] Not running — not a native platform');
-        return;
-      }
+      if (!window.Capacitor || cancelled) return;
 
       try {
         const perm = await LocalNotifications.checkPermissions();
@@ -157,9 +150,8 @@ export function NotificationManager() {
 
         if (notifications.length > 0) {
           await LocalNotifications.schedule({ notifications });
-          console.log(`[NotificationManager] Scheduled ${notifications.length} notification(s):`, notifications.map(n => n.title));
+          console.log(`[NotificationManager] Scheduled ${notifications.length} notification(s)`);
         } else {
-          console.log('[NotificationManager] No notifications to schedule');
         }
       } catch (err) {
         console.error('NotificationManager error:', err);
