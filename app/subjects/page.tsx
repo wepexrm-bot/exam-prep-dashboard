@@ -135,19 +135,10 @@ export default function SubjectsPage() {
                 display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
                 cursor: 'pointer', userSelect: 'none', gap: 8, flexWrap: 'wrap',
               }} onClick={() => setOpenSubj(prev => ({ ...prev, [si]: !prev[si] }))}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: '1 1 140px' }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 140px' }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>
                     {subj.name}
                   </span>
-                  {totalC > 0 && (
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99,
-                      background: statusColor + '1A', color: statusColor, whiteSpace: 'nowrap',
-                      border: `1px solid ${statusColor}33`,
-                    }}>
-                      {statusText}
-                    </span>
-                  )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -191,9 +182,16 @@ export default function SubjectsPage() {
 
               {totalC > 0 && (
                 <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--muted)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, flex: '1 1 auto' }}>
                     <Layers size={11} />
                     {doneC}/{totalC} chapters
+                  </span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 99,
+                    background: statusColor + '1A', color: statusColor, whiteSpace: 'nowrap',
+                    border: `1px solid ${statusColor}33`, flexShrink: 0,
+                  }}>
+                    {statusText}
                   </span>
                 </div>
               )}
