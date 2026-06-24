@@ -63,7 +63,7 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
       width: 230, position: 'fixed', top: 0, bottom: 0, left: 0, zIndex: 10,
       display: 'flex', flexDirection: 'column', overflowY: 'auto',
       padding: '24px 16px',
-      background: 'rgba(28,31,37,0.7)',
+      background: 'rgba(28,31,37,0.5)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderRight: '1px solid rgba(255,255,255,0.06)',

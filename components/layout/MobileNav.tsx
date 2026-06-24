@@ -67,7 +67,7 @@ export function MobileTopBar({ onOpenDrawer, examType: examTypeProp }: { onOpenD
     <div className="md:hidden flex" style={{
       position: 'fixed', top: 0, left: 0, right: 0, height: 56, zIndex: 50,
       alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
-      background: 'rgba(20,22,26,0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+      background: 'rgba(20,22,26,0.5)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
       borderBottom: '1px solid rgba(255,255,255,0.06)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontWeight: 700, fontSize: 15, color: '#fff' }}>
@@ -90,7 +90,7 @@ export function MobileBottomNav() {
     <nav className="md:hidden flex" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, height: 64, zIndex: 50,
       alignItems: 'center', justifyContent: 'space-around',
-      background: 'rgba(20,22,26,0.8)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+      background: 'rgba(20,22,26,0.5)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
       borderTop: '1px solid rgba(255,255,255,0.06)',
     }}>
       {BOTTOM_NAV.map(({ page, icon, label }) => {
@@ -143,7 +143,7 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
         transition: 'all 280ms cubic-bezier(0.4,0,0.2,1)',
         boxShadow: '4px 0 32px rgba(0,0,0,0.4)',
         left: drawerOpen ? 0 : -280,
-        background: 'rgba(20,22,26,0.85)',
+        background: 'rgba(20,22,26,0.5)',
         backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
       }}>
