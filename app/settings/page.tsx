@@ -88,7 +88,7 @@ export default function SettingsPage() {
     customAlerts: [],
   };
 
-  const [openSections, setOpenSections] = useState<Record<Section, boolean>>({ account: true, study: false, notifications: false, danger: false });
+  const [openSections, setOpenSections] = useState<Record<Section, boolean>>({ account: false, study: false, notifications: false, danger: false });
 
   const toggleSection = useCallback((s: Section) => {
     setOpenSections(prev => ({ ...prev, [s]: !prev[s] }));
@@ -183,33 +183,35 @@ export default function SettingsPage() {
     const isBreak = notifKey === 'breakReminder';
     const pref: any = (prefs as any)[notifKey];
     return (
-      <div className="flex items-center gap-3 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex flex-wrap items-center gap-2 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: pref.enabled ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.04)', color: pref.enabled ? '#22D3EE' : '#5B5F68' }}>
           {NOTIF_ICONS[notifKey]}
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-[120px]">
           <div className="text-[13px] font-medium" style={{ color: 'var(--text)' }}>{label}</div>
           <div className="text-[11px]" style={{ color: 'var(--muted)' }}>{desc}</div>
         </div>
-        {!isBreak && pref.enabled && (
-          <div className="flex items-center gap-1 mr-1">
-            <Select value={pref.hour} onChange={v => setNotifTime(notifKey, 'hour', v)} options={HOUR_OPTS}
-              style={{ padding: '3px 6px', fontSize: 10, borderRadius: 6, width: 44 }} />
-            <span style={{ color: 'var(--muted)', fontSize: 10 }}>:</span>
-            <Select value={pref.minute} onChange={v => setNotifTime(notifKey, 'minute', v)} options={MIN_OPTS}
-              style={{ padding: '3px 6px', fontSize: 10, borderRadius: 6, width: 44 }} />
-          </div>
-        )}
-        {isBreak && pref.enabled && (
-          <Select value={pref.intervalMin} onChange={setBreakInterval} options={INTERVAL_OPTS}
-            style={{ padding: '3px 8px', fontSize: 10, borderRadius: 6 }} />
-        )}
-        {notifKey === 'weeklyTarget' && pref.enabled && (
-          <Select value={pref.weekday} onChange={setWeekday} options={DAY_OPTS}
-            style={{ padding: '3px 8px', fontSize: 10, borderRadius: 6 }} />
-        )}
-        <Toggle on={pref.enabled} onClick={() => toggleNotif(notifKey)} />
+        <div className="flex items-center gap-1.5 flex-wrap shrink-0" style={{ marginLeft: 'auto' }}>
+          {!isBreak && pref.enabled && (
+            <div className="flex items-center gap-1">
+              <Select value={pref.hour} onChange={v => setNotifTime(notifKey, 'hour', v)} options={HOUR_OPTS}
+                style={{ padding: '3px 6px', fontSize: 10, borderRadius: 6, width: 44 }} />
+              <span style={{ color: 'var(--muted)', fontSize: 10 }}>:</span>
+              <Select value={pref.minute} onChange={v => setNotifTime(notifKey, 'minute', v)} options={MIN_OPTS}
+                style={{ padding: '3px 6px', fontSize: 10, borderRadius: 6, width: 44 }} />
+            </div>
+          )}
+          {isBreak && pref.enabled && (
+            <Select value={pref.intervalMin} onChange={setBreakInterval} options={INTERVAL_OPTS}
+              style={{ padding: '3px 8px', fontSize: 10, borderRadius: 6 }} />
+          )}
+          {notifKey === 'weeklyTarget' && pref.enabled && (
+            <Select value={pref.weekday} onChange={setWeekday} options={DAY_OPTS}
+              style={{ padding: '3px 8px', fontSize: 10, borderRadius: 6 }} />
+          )}
+          <Toggle on={pref.enabled} onClick={() => toggleNotif(notifKey)} />
+        </div>
       </div>
     );
   }
@@ -313,9 +315,9 @@ export default function SettingsPage() {
               const hh = alert.hour % 12 || 12;
               const timeStr = `${hh}:${String(alert.minute).padStart(2, '0')} ${ampm}`;
               return (
-                <div key={alert.id} className="flex items-center gap-2 py-2 px-3 rounded-lg" style={{ background: alert.enabled ? 'rgba(167,139,250,0.06)' : 'rgba(255,255,255,0.02)' }}>
+                <div key={alert.id} className="flex items-center gap-2 py-2 px-3 rounded-lg flex-wrap" style={{ background: alert.enabled ? 'rgba(167,139,250,0.06)' : 'rgba(255,255,255,0.02)' }}>
                   <Toggle on={alert.enabled} onClick={() => toggleCustomAlert(alert.id)} />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-[80px]">
                     <div className="text-[12px] font-medium truncate" style={{ color: alert.enabled ? 'var(--text)' : '#5B5F68' }}>{alert.title}</div>
                     <div className="text-[10px] truncate" style={{ color: 'var(--muted)' }}>
                       {timeStr}{alert.body ? ` · ${alert.body}` : ''}
