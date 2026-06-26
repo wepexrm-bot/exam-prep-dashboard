@@ -248,19 +248,18 @@ export function NotificationManager() {
           prefs.customAlerts.forEach((alert, idx) => {
             if (!alert.enabled) return;
             const id = NOTIF_IDS.CUSTOM_START + idx;
-            const schedule: Record<string, unknown> = {
+            const on: Record<string, unknown> = {
               hour: clamp(alert.hour, 0, 23),
               minute: clamp(alert.minute, 0, 59),
-              repeats: true,
             };
             if (alert.daysOfWeek.length > 0) {
-              schedule.weekday = alert.daysOfWeek[0];
+              on.weekday = alert.daysOfWeek[0];
             }
             notifications.push({
               id,
               title: alert.title || 'Reminder',
               body: alert.body || '',
-              schedule,
+              schedule: { on, repeats: true },
             });
           });
         }

@@ -173,7 +173,7 @@ export default function StudyTimerPage() {
 
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>Study Timer</h1>
-        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 0' }}>
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 0' }} suppressHydrationWarning>
           {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
