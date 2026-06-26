@@ -148,7 +148,7 @@ export default function StudyTimerPage() {
     const hrs = daySessions.reduce((a, s) => a + s.durationSec, 0) / 3600;
     last14.push({ date: dKey, hours: Math.round(hrs * 10) / 10, sessions: daySessions.length });
   }
-  const maxH = Math.max(1, ...last14.map(d => d.hours));
+  const maxH = Math.max(dailyTarget, ...last14.map(d => d.hours));
 
   const dayTotals: Record<string, number> = {};
   sessions.forEach(s => {
