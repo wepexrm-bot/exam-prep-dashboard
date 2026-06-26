@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { AppData, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject } from '@/lib/types';
+import { AppData, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject, NotificationPrefs } from '@/lib/types';
 import { useExamConfig } from '@/lib/useExamConfig';
 
 interface AppContextType {
@@ -31,6 +31,7 @@ interface AppContextType {
   renameChapter: (si: number, ci: number, newName: string) => Promise<void>;
   addStudySession: (session: StudySession) => Promise<void>;
   setWeeklyTarget: (n: number) => Promise<void>;
+  updateNotificationPrefs: (prefs: NotificationPrefs) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -104,6 +105,14 @@ export function AppProvider({
     revisions: [],
     studySessions: [],
     weeklyTarget: 12,
+    notificationPrefs: {
+      revisionReminder: { enabled: true, hour: 9, minute: 0 },
+      goalsCheckIn: { enabled: false, hour: 17, minute: 0 },
+      streakReminder: { enabled: true, hour: 15, minute: 0 },
+      weeklyTarget: { enabled: false, hour: 18, minute: 0, weekday: 0 },
+      breakReminder: { enabled: false, intervalMin: 120 },
+      customAlerts: [],
+    },
   };
 
   const CACHE_KEY = 'gate_data_cache';
@@ -144,6 +153,7 @@ export function AppProvider({
         revisions: d.revisions || [],
         studySessions: d.studySessions || [],
         weeklyTarget: d.weeklyTarget || 12,
+        notificationPrefs: d.notificationPrefs || defaultData.notificationPrefs,
         lastUpdated: d.lastUpdated,
       };
       setData(fresh);
@@ -339,6 +349,11 @@ export function AppProvider({
     apiCall('POST', '/api/data', { weeklyTarget: dataRef.current.weeklyTarget }).catch(() => showErrorToast('Failed to save'));
   }, []);
 
+  const updateNotificationPrefs = useCallback(async (prefs: NotificationPrefs) => {
+    mutate(prev => ({ ...prev, notificationPrefs: prefs }));
+    apiCall('POST', '/api/data', { notificationPrefs: dataRef.current.notificationPrefs }).catch(() => showErrorToast('Failed to save notification prefs'));
+  }, []);
+
   return (
     <AppContext.Provider value={{
       data, loading, examType, username, loadData, syncToServer,
@@ -347,7 +362,7 @@ export function AppProvider({
       addPYQSession, deletePYQSession,
       addRevision, markRevised, deleteRevision,
       addSubject, deleteSubject, addChapter, toggleChapter, deleteChapter, renameChapter,
-      addStudySession, setWeeklyTarget,
+      addStudySession, setWeeklyTarget, updateNotificationPrefs,
     }}>
       {children}
     </AppContext.Provider>

@@ -58,6 +58,31 @@ export interface StudySession {
   durationSec: number;
 }
 
+export interface NotificationPref {
+  enabled: boolean;
+  hour: number;
+  minute: number;
+}
+
+export interface CustomAlert {
+  id: number;
+  title: string;
+  body: string;
+  enabled: boolean;
+  hour: number;
+  minute: number;
+  daysOfWeek: number[]; // 0=Sun … 6=Sat — empty = daily
+}
+
+export interface NotificationPrefs {
+  revisionReminder: NotificationPref;
+  goalsCheckIn: NotificationPref;
+  streakReminder: NotificationPref;
+  weeklyTarget: NotificationPref & { weekday: number };
+  breakReminder: { enabled: boolean; intervalMin: number };
+  customAlerts: CustomAlert[];
+}
+
 export interface AppData {
   goals: Goal[];
   subjects: Subject[];
@@ -66,6 +91,7 @@ export interface AppData {
   revisions: Revision[];
   studySessions: StudySession[];
   weeklyTarget: number;
+  notificationPrefs?: NotificationPrefs;
   lastUpdated?: string;
 }
 

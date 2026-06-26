@@ -49,9 +49,47 @@ const StudySessionSchema = new Schema(
   { _id: false }
 );
 
+const CustomAlertSchema = new Schema(
+  {
+    id: Number, title: String, body: String,
+    enabled: { type: Boolean, default: true },
+    hour: { type: Number, default: 12 }, minute: { type: Number, default: 0 },
+    daysOfWeek: { type: [Number], default: [] },
+  },
+  { _id: false }
+);
+
+const NotificationPrefsSchema = new Schema(
+  {
+    revisionReminder: {
+      enabled: { type: Boolean, default: true },
+      hour: { type: Number, default: 9 }, minute: { type: Number, default: 0 },
+    },
+    goalsCheckIn: {
+      enabled: { type: Boolean, default: false },
+      hour: { type: Number, default: 17 }, minute: { type: Number, default: 0 },
+    },
+    streakReminder: {
+      enabled: { type: Boolean, default: true },
+      hour: { type: Number, default: 15 }, minute: { type: Number, default: 0 },
+    },
+    weeklyTarget: {
+      enabled: { type: Boolean, default: false },
+      hour: { type: Number, default: 18 }, minute: { type: Number, default: 0 },
+      weekday: { type: Number, default: 0 },
+    },
+    breakReminder: {
+      enabled: { type: Boolean, default: false },
+      intervalMin: { type: Number, default: 120 },
+    },
+    customAlerts: { type: [CustomAlertSchema], default: [] },
+  },
+  { _id: false }
+);
+
 export interface IAppData extends Document {
-  userId?: string;       // new — ObjectId string of the user
-  username?: string;     // kept for backward compatibility during migration
+  userId?: string;
+  username?: string;
   goals: typeof GoalSchema[];
   subjects: typeof SubjectSchema[];
   dailyScores: typeof DailyScoreSchema[];
@@ -59,6 +97,7 @@ export interface IAppData extends Document {
   revisions: typeof RevisionSchema[];
   studySessions: typeof StudySessionSchema[];
   weeklyTarget: number;
+  notificationPrefs?: typeof NotificationPrefsSchema;
   lastUpdated: Date;
 }
 
@@ -73,6 +112,7 @@ const AppDataSchema = new Schema<IAppData>(
     revisions: { type: [RevisionSchema], default: [] },
     studySessions: { type: [StudySessionSchema], default: [] },
     weeklyTarget: { type: Number, default: 12 },
+    notificationPrefs: { type: NotificationPrefsSchema, default: () => ({}) },
     lastUpdated: { type: Date, default: Date.now },
   },
   { timestamps: true }
