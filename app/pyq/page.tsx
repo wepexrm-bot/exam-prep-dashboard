@@ -5,7 +5,7 @@ import { Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { PYQChapter, PYQSession } from '@/lib/types';
 import { Plus, Folder, FolderOpen, Trash2, ChevronDown } from 'lucide-react';
 
-function today() { return new Date().toISOString().split('T')[0]; }
+function today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
 function accColor(a: number) {
   return a >= 75 ? '#4ADE80' : a >= 50 ? '#FB923C' : '#F87171';
@@ -37,7 +37,7 @@ export default function PYQPage() {
   const subjects = data.subjects || [];
   const pyqData: PYQChapter[] = data.pyqData || [];
 
-  const allStats = pyqData.map(d => getStats(d)).filter(Boolean) as NonNullable<ReturnType<typeof getStats>>[];
+  const allStats = pyqData.map(d => getStats(d)).filter((s): s is NonNullable<ReturnType<typeof getStats>> => s !== null);
   const totalSessions = pyqData.reduce((a, d) => a + (d.sessions?.length || 0), 0);
   const chaptersComplete = allStats.filter(s => s.isComplete).length;
   const totalSolved = allStats.reduce((a, s) => a + s.att, 0);
@@ -61,9 +61,18 @@ export default function PYQPage() {
     if (!chapter) return showToast('Select a chapter — add chapters in Subject Progress first');
     if (!total) return showToast('Enter total questions in this chapter');
     if (!attempted) return showToast('Enter questions attempted this session');
-    const acc = correct && attempted ? Math.round((Number(correct) / Number(attempted)) * 100) : 0;
-    await addPYQSession(`${selSubject}::${chapter}`, Number(total), {
-      attempted: Number(attempted), correct: Number(correct), accuracy: acc, date: today()
+    if (!correct) return showToast('Enter questions correct this session');
+    const nTotal = Number(total);
+    const nAttempted = Number(attempted);
+    const nCorrect = Number(correct);
+    if (nTotal <= 0) return showToast('Total questions must be greater than 0');
+    if (nAttempted < 0) return showToast('Attempted cannot be negative');
+    if (nCorrect < 0) return showToast('Correct cannot be negative');
+    if (nCorrect > nAttempted) return showToast('Correct cannot exceed attempted');
+    if (nAttempted > nTotal) return showToast('Attempted cannot exceed total questions');
+    const acc = nAttempted > 0 ? Math.round((nCorrect / nAttempted) * 100) : 0;
+    await addPYQSession(`${selSubject}::${chapter}`, nTotal, {
+      attempted: nAttempted, correct: nCorrect, accuracy: acc, date: today()
     });
     showToast(`Session added to ${chapter}!`);
     setShowModal(false);
@@ -227,7 +236,7 @@ export default function PYQPage() {
                               <span style={{ fontSize: 11, color: 'var(--muted)', flex: 1 }}>{s.attempted} attempted · {s.correct} correct</span>
                               <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 8px', borderRadius: 99, background: accBg(s.accuracy), color: accColor(s.accuracy), flexShrink: 0 }}>{s.accuracy}%</span>
                               <button
-                                onClick={(e) => { e.stopPropagation(); deletePYQSession(chap.key, i); }}
+                                onClick={(e) => { e.stopPropagation(); if (confirm('Delete this session?')) deletePYQSession(chap.key, i); }}
                                 style={{
                                   background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer',
                                   padding: '2px 4px', borderRadius: 4, flexShrink: 0, display: 'flex',
@@ -265,16 +274,16 @@ export default function PYQPage() {
           </select>
         </FormGroup>
         <FormGroup label="Total questions in this chapter">
-          <input className="form-input" type="number" placeholder="e.g. 80"
+          <input className="form-input" type="number" min="1" placeholder="e.g. 80"
             value={total} onChange={e => setTotal(e.target.value)} />
         </FormGroup>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <FormGroup label="Attempted">
-            <input className="form-input" type="number" placeholder="e.g. 30"
+            <input className="form-input" type="number" min="0" placeholder="e.g. 30"
               value={attempted} onChange={e => setAttempted(e.target.value)} />
           </FormGroup>
           <FormGroup label="Correct">
-            <input className="form-input" type="number" placeholder="e.g. 20"
+            <input className="form-input" type="number" min="0" placeholder="e.g. 20"
               value={correct} onChange={e => setCorrect(e.target.value)} />
           </FormGroup>
         </div>

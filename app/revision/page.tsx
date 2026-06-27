@@ -5,7 +5,7 @@ import { AlertTriangle, RefreshCw, Check, Trash2 } from 'lucide-react';
 import { PageHeader, Card, CardHeader, MetricCard, Empty, Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { REVISION_INTERVALS } from '@/lib/constants';
 
-function today() { return new Date().toISOString().split('T')[0]; }
+function localDate(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
 export default function RevisionPage() {
   const { data, addRevision, markRevised, deleteRevision } = useApp();
@@ -19,13 +19,18 @@ export default function RevisionPage() {
   const subjects = data.subjects || [];
   const now = new Date();
 
+  function parseLocalDate(s: string) {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
   const due = revs.filter(r => {
-    const next = new Date(r.lastRevised);
+    const next = parseLocalDate(r.lastRevised);
     next.setDate(next.getDate() + r.intervalDays);
     return next <= now;
   });
   const soon = revs.filter(r => {
-    const next = new Date(r.lastRevised);
+    const next = parseLocalDate(r.lastRevised);
     next.setDate(next.getDate() + r.intervalDays);
     return next > now && (next.getTime() - now.getTime()) < 3 * 86400000;
   });
@@ -35,12 +40,12 @@ export default function RevisionPage() {
     if (!topic.trim()) return showToast('Enter a topic');
     await addRevision({ topic: topic.trim(), subject: subject || (subjects[0]?.name || 'General'), intervalDays, notes });
     showToast('Revision logged!');
-    setTopic(''); setNotes('');
+    setTopic(''); setSubject(''); setIntervalDays(7); setNotes('');
     setShowModal(false);
   }
 
   function getNextDate(r: typeof revs[0]) {
-    const next = new Date(r.lastRevised);
+    const next = parseLocalDate(r.lastRevised);
     next.setDate(next.getDate() + r.intervalDays);
     return next;
   }

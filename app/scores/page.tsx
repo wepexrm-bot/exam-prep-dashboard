@@ -28,9 +28,10 @@ export default function ScoresPage() {
   const scoresAsc = useMemo(() => [...(data.dailyScores || [])].sort((a, b) => a.date.localeCompare(b.date)), [data.dailyScores]);
 
   const averageScorePercent = useMemo(() => {
-    if (scores.length === 0) return 0;
-    const percentages = scores.map(s => pct(s.score, s.totalMarks));
-    return Math.round(percentages.reduce((a, p) => a + p, 0) / scores.length);
+    const withTotal = scores.filter(s => s.totalMarks && s.totalMarks > 0);
+    if (withTotal.length === 0) return 0;
+    const percentages = withTotal.map(s => pct(s.score, s.totalMarks));
+    return Math.round(percentages.reduce((a, p) => a + p, 0) / withTotal.length);
   }, [scores]);
 
   const topScore = useMemo(() => {
@@ -77,7 +78,8 @@ export default function ScoresPage() {
     if (!title.trim()) return showToast('Enter a test title');
     if (fScore === '' || totalMarks === '' || accuracy === '') return showToast('Fill in scored, total, and accuracy');
     const trimmed = title.trim();
-    if (data.dailyScores?.some(s => s.title === trimmed)) return showToast(`"${trimmed}" already exists — use a different title`);
+    const todayStr = today();
+    if (data.dailyScores?.some(s => s.title === trimmed && s.date === todayStr)) return showToast(`"${trimmed}" already exists today — use a different title`);
     addScore({
       date: today(), title: trimmed,
       score: Number(fScore), totalMarks: Number(totalMarks),
@@ -88,6 +90,7 @@ export default function ScoresPage() {
     });
     setTitle(''); setRank(''); setPercentile('');
     setFScore(''); setTotalMarks(''); setAccuracy('');
+    setSubjectWise(false); setSelectedSubject('');
     showToast('Mock score logged');
   }
 

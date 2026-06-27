@@ -114,7 +114,7 @@ export default function SubjectsPage() {
         const isOpen = openSubj[si];
         const color = SUB_COLORS[si % SUB_COLORS.length];
         const doneC = (subj.chapters || []).filter(c => c.done).length;
-        const totalC = subj.chapters.length;
+        const totalC = (subj.chapters || []).length;
         const statusText = pct >= 80 ? 'Strong' : pct >= 50 ? 'In progress' : 'Needs work';
         const statusColor = pct >= 80 ? '#4ADE80' : pct >= 50 ? '#FB923C' : '#F87171';
         const glowColor = pct >= 80 ? 'rgba(74,222,128,0.35)' : 'rgba(251,146,60,0.3)';

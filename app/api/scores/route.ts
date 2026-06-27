@@ -11,19 +11,19 @@ export async function POST(req: NextRequest) {
   await connectDB();
   const entry = await req.json();
 
-  let doc = await AppData.findOne({ userId: auth.userId });
-  if (!doc) doc = await AppData.findOne({ username: auth.name });
-  if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  const matchKey = (s: { date: string; title?: string }) => s.date === entry.date && (s.title || '') === (entry.title || '');
-  const idx = doc.dailyScores.findIndex(matchKey);
-  if (idx >= 0) {
-    doc.dailyScores[idx] = entry;
-  } else {
-    doc.dailyScores.push(entry);
+  // Atomic upsert: try to update existing entry matched by date+title
+  const title = entry.title || '';
+  const result = await AppData.updateOne(
+    { userId: auth.userId, 'dailyScores.date': entry.date, 'dailyScores.title': title },
+    { $set: { 'dailyScores.$': entry, lastUpdated: new Date() } }
+  );
+  if (result.modifiedCount === 0 && result.matchedCount === 0) {
+    // No matching entry — push a new one
+    await AppData.updateOne(
+      { userId: auth.userId },
+      { $push: { dailyScores: entry }, $set: { lastUpdated: new Date() } }
+    );
   }
-  doc.lastUpdated = new Date();
-  await doc.save();
   return NextResponse.json({ ok: true });
 }
 

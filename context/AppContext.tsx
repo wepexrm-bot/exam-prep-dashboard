@@ -243,7 +243,7 @@ export function AppProvider({
     setData(prev => {
       const existing = prev.pyqData.find(p => p.key === key);
       const pyqData: PYQChapter[] = existing
-        ? prev.pyqData.map(p => p.key === key ? { ...p, total, sessions: [...p.sessions, session] } : p)
+        ? prev.pyqData.map(p => p.key === key ? { ...p, sessions: [...p.sessions, session] } : p)
         : [...prev.pyqData, { key, total, sessions: [session] }];
       apiCall('POST', '/api/data', { pyqData }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, pyqData };

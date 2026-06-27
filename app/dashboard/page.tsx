@@ -3,7 +3,7 @@ import { Grid3X3, Clock, FileText, BarChart3, RefreshCw, Calendar, Flame, Plus, 
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Empty } from '@/components/ui';
-import { computeStreak, getDateLabel, getPrediction, today, dateKey } from '@/lib/utils';
+import { computeStreak, getDateLabel, today, dateKey } from '@/lib/utils';
 import { ScoreModal } from '@/components/modals/ScoreModal';
 import { EXAM_CONFIG } from '@/lib/constants';
 
@@ -53,8 +53,9 @@ export default function DashboardPage() {
   const pyqTotalQs = pyqData.reduce((a: number, d: any) => a + (d.total || 0), 0);
   const pyqPct = pyqTotalQs > 0 ? Math.min(100, Math.round((pyqTotalAttempted / pyqTotalQs) * 100)) : 0;
 
+  function parseLocalDate(s: string) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
   const revDue = (data.revisions || []).filter((r: any) => {
-    const next = new Date(r.lastRevised);
+    const next = parseLocalDate(r.lastRevised);
     next.setDate(next.getDate() + r.intervalDays);
     return next <= new Date();
   });

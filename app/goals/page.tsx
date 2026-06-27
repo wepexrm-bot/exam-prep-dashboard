@@ -117,7 +117,9 @@ export default function GoalsCalendarPage() {
 
   const selectedGoals = selectedDate ? goalsForDate(selectedDate) : [];
   const selectedDeadlines = selectedDate ? goals.filter(g => g.endDate === selectedDate && g.date !== selectedDate) : [];
-  const selectedDoneCount = selectedGoals.filter(g => g.done).length;
+  const deadlineIds = new Set(selectedDeadlines.map(g => g.id));
+  const displayGoals = selectedGoals.filter(g => !deadlineIds.has(g.id));
+  const selectedDoneCount = displayGoals.filter(g => g.done).length;
 
   function prevMonth() {
     setViewMonth(({ year, month }) => month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 });
@@ -133,7 +135,7 @@ export default function GoalsCalendarPage() {
 
   async function handleSave() {
     if (!selectedDate) return;
-    if (selectedDate < todayKey()) return showToast('Cannot add goals to a past date');
+    if (selectedDate < todayKey() && !(isRanged && endDate && endDate >= todayKey())) return showToast('Cannot add goals to a past date');
     if (!goalText.trim()) return showToast('Enter a goal description');
     if (isRanged && endDate && endDate < selectedDate) return showToast('End date must be after start date');
     await addGoal({
@@ -298,8 +300,8 @@ export default function GoalsCalendarPage() {
                     padding: '2px 9px', borderRadius: 99, border: '1px solid rgba(34,211,238,0.3)',
                     }}>Today</span>
                   )}
-                  {selectedGoals.length > 0 && (
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{selectedDoneCount}/{selectedGoals.length} done</span>
+                  {displayGoals.length > 0 && (
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{selectedDoneCount}/{displayGoals.length} done</span>
                   )}
                 </div>
               </div>
@@ -328,11 +330,11 @@ export default function GoalsCalendarPage() {
 
             {/* Goals list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {selectedGoals.length === 0 && selectedDeadlines.length === 0 && (
+              {displayGoals.length === 0 && selectedDeadlines.length === 0 && (
                 <Empty>No goals for this date yet.</Empty>
               )}
 
-              {selectedGoals.map((g, idx) => {
+              {displayGoals.map((g, idx) => {
                 const tc = TAG_COLORS[g.tag] || TAG_COLORS.Other;
                 const isRange = g.endDate && g.endDate !== g.date;
                 return (
@@ -383,7 +385,7 @@ export default function GoalsCalendarPage() {
                   <div key={`deadline-${g.id}`} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
                     background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)',
-                    animation: `goalRowIn 0.3s ease ${(selectedGoals.length + idx) * 0.04}s both`,
+                    animation: `goalRowIn 0.3s ease ${(displayGoals.length + idx) * 0.04}s both`,
                   }}>
                     <span style={{ color: '#F87171', flexShrink: 0 }}>{I.flag}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>

@@ -45,6 +45,11 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
+function parseLocalDate(s: string) {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 type Notif = Record<string, unknown>;
 
 export function NotificationManager() {
@@ -92,7 +97,7 @@ export function NotificationManager() {
 
         if (prefs.revisionReminder.enabled) {
           const revDue = (data.revisions || []).filter(r => {
-            const next = new Date(r.lastRevised);
+            const next = parseLocalDate(r.lastRevised);
             next.setDate(next.getDate() + r.intervalDays);
             return next <= new Date();
           }).length;
@@ -303,7 +308,7 @@ export function NotificationManager() {
 
       if (p.revisionReminder.enabled) {
         const revDue = (data.revisions || []).filter(r => {
-          const next = new Date(r.lastRevised);
+          const next = parseLocalDate(r.lastRevised);
           next.setDate(next.getDate() + r.intervalDays);
           return next <= new Date();
         }).length;
