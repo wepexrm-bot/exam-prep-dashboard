@@ -1,4 +1,4 @@
-import { AppData, DailyScore, PYQChapter, Prediction, Subject } from './types';
+import { AppData, DailyScore, Subject } from './types';
 
 // ── Local-date-safe key builder ──────────────────────────────
 // Never use toISOString().split('T')[0] for "today" — it converts to UTC
@@ -74,48 +74,3 @@ export function computeStreak(data: AppData): number {
   return streak;
 }
 
-export function getPrediction(data: AppData, weights: Record<string, number> = {}): Prediction {
-  const sc = (data.dailyScores || []).slice(-14);
-  if (!sc.length) return { score: null, percentile: null, qualify: null, noData: true, advice: [] };
-
-  const baseAvg = sc.reduce((a, s) => a + s.score, 0) / sc.length;
-  const subjects = data.subjects || [];
-
-  let weightedSum = 0, totalWeight = 0;
-  subjects.forEach(s => {
-    const w = weights[s.name] || 5;
-    weightedSum += (getPct(s) / 100) * w;
-    totalWeight += w;
-  });
-  const subjectFactor = totalWeight > 0 ? weightedSum / totalWeight : 0.5;
-
-  const pyqData = data.pyqData || [];
-  const pyqAccList = pyqData
-    .map((d: PYQChapter) => {
-      if (!d.sessions?.length) return null;
-      const att = d.sessions.reduce((a, s) => a + s.attempted, 0);
-      const cor = d.sessions.reduce((a, s) => a + s.correct, 0);
-      return att > 0 ? (cor / att) * 100 : null;
-    })
-    .filter(Boolean) as number[];
-  const pyqBoost = pyqAccList.length
-    ? (pyqAccList.reduce((a, v) => a + v, 0) / pyqAccList.length - 50) / 200
-    : 0;
-
-  const proj = Math.min(100, baseAvg * (0.7 + subjectFactor * 0.4) + pyqBoost * 10);
-
-  const advice = subjects
-    .filter(s => getPct(s) < 50)
-    .sort((a, b) => (weights[b.name] || 5) - (weights[a.name] || 5))
-    .slice(0, 3)
-    .map(s => `${s.name} (${weights[s.name] || 5}% weight, only ${getPct(s)}% done)`);
-
-  return {
-    score: Math.round(proj * 10) / 10,
-    percentile: Math.round(Math.min(99, 50 + proj * 0.42) * 10) / 10,
-    qualify: Math.round(Math.min(99, 40 + proj * 0.55)),
-    noData: false,
-    subjectFactor: Math.round(subjectFactor * 100),
-    advice,
-  };
-}

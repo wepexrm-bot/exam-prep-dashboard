@@ -94,12 +94,3 @@ export interface AppData {
   notificationPrefs?: NotificationPrefs;
   lastUpdated?: string;
 }
-
-export interface Prediction {
-  score: number | null;
-  percentile: number | null;
-  qualify: number | null;
-  noData: boolean;
-  subjectFactor?: number;
-  advice: string[];
-}

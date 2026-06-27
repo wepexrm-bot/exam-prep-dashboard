@@ -1,7 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Wand2, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap, BarChart3 } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { EXAM_CONFIG } from '@/lib/constants';
@@ -15,7 +15,6 @@ const I = {
   revision: <RefreshCw size={16} />,
   timer: <Timer size={16} />,
   scores: <TrendingUp size={16} />,
-  predict: <Wand2 size={16} />,
   storage: <Database size={16} />,
   settings: <Settings size={16} />,
   insights: <BarChart3 size={16} />,
@@ -48,7 +47,6 @@ const ALL_NAV = [
   ]},
   { section: 'Performance', items: [
     { page: 'scores', icon: I.scores, label: 'Score Log' },
-    { page: 'predict', icon: I.predict, label: 'Prediction' },
     { page: 'insights', icon: I.insights, label: 'Insights' },
     { page: 'storage', icon: I.storage, label: 'Data & Backup' },
     { page: 'settings', icon: I.settings, label: 'Settings' },

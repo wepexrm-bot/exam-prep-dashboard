@@ -9,7 +9,6 @@ export interface ExamConfigData {
   colorLight: string;
   tagline: string;
   subjects: string[];
-  weights: Record<string, number>;
   goalTags: string[];
   examDate?: string;
 }
@@ -18,17 +17,17 @@ export interface ExamConfigData {
 const FALLBACK_CONFIGS: Record<string, ExamConfigData> = {
   GATE: {
     examId: 'GATE', label: 'GATE CS', emoji: '🖥️', color: '#2563EB', colorLight: '#DBEAFE',
-    tagline: 'CS 2027', subjects: [], weights: {},
+    tagline: 'CS 2027', subjects: [],
     goalTags: ['CS', 'Math', 'CN', 'Test', 'Revision', 'PYQ', 'Other'],
   },
   NET: {
     examId: 'NET', label: 'UGC NET', emoji: '📖', color: '#7C3AED', colorLight: '#EDE9FE',
-    tagline: 'English 2026', subjects: [], weights: {},
+    tagline: 'English 2026', subjects: [],
     goalTags: ['Paper1', 'Paper2', 'Revision', 'Test', 'Reading', 'Writing', 'Other'],
   },
   GOVT: {
     examId: 'GOVT', label: 'Govt Jobs', emoji: '🏛️', color: '#16A34A', colorLight: '#DCFCE7',
-    tagline: 'SSC/Banking 2026', subjects: [], weights: {},
+    tagline: 'SSC/Banking 2026', subjects: [],
     goalTags: ['Quant', 'Reasoning', 'English', 'GK', 'Test', 'Revision', 'Other'],
   },
 };
