@@ -53,10 +53,10 @@ export default function DashboardPage() {
   const pyqTotalQs = pyqData.reduce((a: number, d: any) => a + (d.total || 0), 0);
   const pyqPct = pyqTotalQs > 0 ? Math.min(100, Math.round((pyqTotalAttempted / pyqTotalQs) * 100)) : 0;
 
-  function parseLocalDate(s: string) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+  function parseLocalDate(s: string | undefined) { if (!s) return new Date(0); const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
   const revDue = (data.revisions || []).filter((r: any) => {
     const next = parseLocalDate(r.lastRevised);
-    next.setDate(next.getDate() + r.intervalDays);
+    next.setDate(next.getDate() + (r.intervalDays || 0));
     return next <= new Date();
   });
 
@@ -143,6 +143,24 @@ export default function DashboardPage() {
       sub: `${h}h ${m}m · ${new Date(s.start).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
       badge: `+${h}h ${m}m`, badgeColor: '#22D3EE', badgeBg: 'rgba(34,211,238,0.15)',
       ts: new Date(s.start).getTime(),
+    });
+  });
+  const recentRevs = [...(data.revisions || [])]
+    .sort((a: any, b: any) => (b.lastRevised || '').localeCompare(a.lastRevised || ''))
+    .slice(0, 3)
+    .filter((r: any) => {
+      const next = parseLocalDate(r.lastRevised);
+      next.setDate(next.getDate() + (r.intervalDays || 0));
+      return next > new Date();
+    });
+  recentRevs.forEach((r: any) => {
+    const d = parseLocalDate(r.lastRevised);
+    activities.push({
+      type: 'revision',
+      title: r.topic,
+      sub: `${r.subject} · revised ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`,
+      badge: 'Revised', badgeColor: '#4ADE80', badgeBg: 'rgba(74,222,128,0.15)',
+      ts: d.getTime(),
     });
   });
   revDue.slice(0, 3).forEach((r: any) => {

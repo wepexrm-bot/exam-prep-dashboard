@@ -123,6 +123,19 @@ export function AppProvider({
   dataRef.current = data;
   const cacheLoadedRef = useRef(false);
 
+  const setDataAndPersist = useCallback((updater: AppData | ((prev: AppData) => AppData)) => {
+    if (typeof updater === 'function') {
+      setData(prev => {
+        const next = updater(prev);
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+        return next;
+      });
+    } else {
+      setData(updater);
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(updater)); } catch { /* ignore */ }
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     if (typeof window !== 'undefined' && !cacheLoadedRef.current) {
@@ -172,7 +185,7 @@ export function AppProvider({
   }, []);
 
   const toggleGoal = useCallback(async (id: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const goals = prev.goals.map(g => g.id === id ? { ...g, done: !g.done } : g);
       apiCall('POST', '/api/data', { goals }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, goals };
@@ -180,7 +193,7 @@ export function AppProvider({
   }, []);
 
   const addGoal = useCallback(async (goal: Omit<Goal, 'id'>) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const newId = Math.max(0, ...prev.goals.map(g => g.id)) + 1;
       const goals = [...prev.goals, { ...goal, id: newId }];
       apiCall('POST', '/api/data', { goals }).catch(() => showErrorToast('Failed to save'));
@@ -189,7 +202,7 @@ export function AppProvider({
   }, []);
 
   const updateGoal = useCallback(async (id: number, patch: Partial<Omit<Goal, 'id'>>) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const goals = prev.goals.map(g => g.id === id ? { ...g, ...patch } : g);
       apiCall('POST', '/api/data', { goals }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, goals };
@@ -197,7 +210,7 @@ export function AppProvider({
   }, []);
 
   const deleteGoal = useCallback(async (id: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const goals = prev.goals.filter(g => g.id !== id);
       apiCall('POST', '/api/data', { goals }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, goals };
@@ -205,7 +218,7 @@ export function AppProvider({
   }, []);
 
   const clearDoneGoals = useCallback(async () => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const goals = prev.goals.filter(g => !g.done);
       apiCall('POST', '/api/data', { goals }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, goals };
@@ -213,14 +226,14 @@ export function AppProvider({
   }, []);
 
   const clearAllGoals = useCallback(async () => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       apiCall('POST', '/api/data', { goals: [] }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, goals: [] };
     });
   }, []);
 
   const addScore = useCallback(async (score: DailyScore) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const matchKey = (s: DailyScore) => s.date === score.date && (s.title || '') === (score.title || '');
       const idx = prev.dailyScores.findIndex(matchKey);
       const scores = idx >= 0
@@ -233,7 +246,7 @@ export function AppProvider({
   }, []);
 
   const deleteScore = useCallback(async (date: string, title?: string) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const next = { ...prev, dailyScores: prev.dailyScores.filter(s => s.date !== date || (title != null && (s.title || '') !== title)) };
       apiCall('DELETE', `/api/scores?date=${date}${title ? `&title=${encodeURIComponent(title)}` : ''}`).catch(() => showErrorToast('Failed to delete score'));
       return next;
@@ -241,7 +254,7 @@ export function AppProvider({
   }, []);
 
   const addPYQSession = useCallback(async (key: string, total: number, session: PYQSession) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const existing = prev.pyqData.find(p => p.key === key);
       const pyqData: PYQChapter[] = existing
         ? prev.pyqData.map(p => p.key === key ? { ...p, sessions: [...p.sessions, session] } : p)
@@ -252,7 +265,7 @@ export function AppProvider({
   }, []);
 
   const deletePYQSession = useCallback(async (key: string, idx: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const pyqData = prev.pyqData.map(p => p.key === key
         ? { ...p, sessions: p.sessions.filter((_, i) => i !== idx) } : p);
       apiCall('POST', '/api/data', { pyqData }).catch(() => showErrorToast('Failed to save'));
@@ -261,7 +274,7 @@ export function AppProvider({
   }, []);
 
   const addRevision = useCallback(async (rev: Omit<Revision, 'lastRevised' | 'easinessFactor' | 'repetitions' | 'lastConfidence'>) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const revisions = [...prev.revisions, { ...rev, lastRevised: todayLocal(), easinessFactor: 2.5, repetitions: 0, lastConfidence: undefined as Confidence | undefined }];
       apiCall('POST', '/api/data', { revisions }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, revisions };
@@ -269,7 +282,7 @@ export function AppProvider({
   }, []);
 
   const markRevised = useCallback(async (idx: number, confidence: Confidence) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const revisions = prev.revisions.map((r, i) => {
         if (i !== idx) return r;
         const next = sm2Next(confidence, r.intervalDays, r.easinessFactor, r.repetitions);
@@ -288,7 +301,7 @@ export function AppProvider({
   }, []);
 
   const deleteRevision = useCallback(async (idx: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const revisions = prev.revisions.filter((_, i) => i !== idx);
       apiCall('POST', '/api/data', { revisions }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, revisions };
@@ -296,7 +309,7 @@ export function AppProvider({
   }, []);
 
   const addSubject = useCallback(async (name: string) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const subjects = [...prev.subjects, { name, pct: 0, completed: false, chapters: [] }];
       apiCall('POST', '/api/data', { subjects }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, subjects };
@@ -304,7 +317,7 @@ export function AppProvider({
   }, []);
 
   const deleteSubject = useCallback(async (idx: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const subj = prev.subjects[idx];
       const subjects = prev.subjects.filter((_, i) => i !== idx);
       const pyqData = prev.pyqData.filter(p => !p.key.startsWith(subj.name + '::'));
@@ -314,7 +327,7 @@ export function AppProvider({
   }, []);
 
   const addChapter = useCallback(async (si: number, name: string) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const subjects = prev.subjects.map((s, i) =>
         i === si ? { ...s, chapters: [...s.chapters, { name, done: false }] } : s);
       apiCall('POST', '/api/data', { subjects }).catch(() => showErrorToast('Failed to save'));
@@ -323,7 +336,7 @@ export function AppProvider({
   }, []);
 
   const toggleChapter = useCallback(async (si: number, ci: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const subjects = prev.subjects.map((s, i) => {
         if (i !== si) return s;
         const chapters = s.chapters.map((c, j) => j === ci ? { ...c, done: !c.done } : c);
@@ -335,7 +348,7 @@ export function AppProvider({
   }, []);
 
   const deleteChapter = useCallback(async (si: number, ci: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const subj = prev.subjects[si];
       const key = `${subj.name}::${subj.chapters[ci].name}`;
       const subjects = prev.subjects.map((s, i) => {
@@ -350,7 +363,7 @@ export function AppProvider({
   }, []);
 
   const renameChapter = useCallback(async (si: number, ci: number, newName: string) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const subj = prev.subjects[si];
       const oldKey = `${subj.name}::${subj.chapters[ci].name}`;
       const newKey = `${subj.name}::${newName}`;
@@ -363,7 +376,7 @@ export function AppProvider({
   }, []);
 
   const addStudySession = useCallback(async (session: StudySession) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       const next = { ...prev, studySessions: [...prev.studySessions, session] };
       apiCall('POST', '/api/sessions', session).catch(() => showErrorToast('Failed to save study session'));
       return next;
@@ -371,14 +384,14 @@ export function AppProvider({
   }, []);
 
   const setWeeklyTarget = useCallback(async (n: number) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       apiCall('POST', '/api/data', { weeklyTarget: n }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, weeklyTarget: n };
     });
   }, []);
 
   const updateNotificationPrefs = useCallback(async (prefs: NotificationPrefs) => {
-    setData(prev => {
+    setDataAndPersist(prev => {
       apiCall('POST', '/api/data', { notificationPrefs: prefs }).catch(() => showErrorToast('Failed to save notification prefs'));
       return { ...prev, notificationPrefs: prefs };
     });

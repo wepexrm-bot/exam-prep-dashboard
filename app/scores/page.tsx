@@ -77,6 +77,9 @@ export default function ScoresPage() {
     e.preventDefault();
     if (!title.trim()) return showToast('Enter a test title');
     if (fScore === '' || totalMarks === '' || accuracy === '') return showToast('Fill in scored, total, and accuracy');
+    if (Number(fScore) < 0) return showToast('Scored marks cannot be negative');
+    if (Number(totalMarks) <= 0) return showToast('Total marks must be greater than 0');
+    if (Number(accuracy) < 0 || Number(accuracy) > 100) return showToast('Accuracy must be between 0 and 100');
     const trimmed = title.trim();
     const todayStr = today();
     if (data.dailyScores?.some(s => s.title === trimmed && s.date === todayStr)) return showToast(`"${trimmed}" already exists today — use a different title`);

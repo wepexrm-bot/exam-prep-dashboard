@@ -79,13 +79,14 @@ function Section({ id, icon, title, desc, open, onToggle, children }: { id: Sect
 
 export default function SettingsPage() {
   const { data, setWeeklyTarget, clearAllGoals, updateNotificationPrefs } = useApp();
-  const prefs = data.notificationPrefs || {
+  const prefs = {
     revisionReminder: { enabled: true, hour: 9, minute: 0 },
     goalsCheckIn: { enabled: false, hour: 17, minute: 0 },
     streakReminder: { enabled: true, hour: 15, minute: 0 },
     weeklyTarget: { enabled: false, hour: 18, minute: 0, weekday: 0 },
     breakReminder: { enabled: false, intervalMin: 120 },
-    customAlerts: [],
+    ...data.notificationPrefs,
+    customAlerts: data.notificationPrefs?.customAlerts || [],
   };
 
   const [openSections, setOpenSections] = useState<Record<Section, boolean>>({ account: false, study: false, notifications: false, danger: false });
@@ -98,6 +99,7 @@ export default function SettingsPage() {
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [passMsg, setPassMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [changingPass, setChangingPass] = useState(false);
   const [newAlertTitle, setNewAlertTitle] = useState('');
   const [newAlertBody, setNewAlertBody] = useState('');
   const [newAlertHour, setNewAlertHour] = useState(12);
@@ -105,8 +107,10 @@ export default function SettingsPage() {
 
   async function handleChangePassword() {
     setPassMsg(null);
+    if (changingPass) return;
     if (newPass.length < 6) { setPassMsg({ text: '✕ New password must be at least 6 characters', ok: false }); return; }
     if (newPass !== confirmPass) { setPassMsg({ text: '✕ Passwords do not match', ok: false }); return; }
+    setChangingPass(true);
     try {
       const r = await fetch('/api/auth/password', {
         method: 'POST',
@@ -114,13 +118,14 @@ export default function SettingsPage() {
         body: JSON.stringify({ currentPassword: currPass, newPassword: newPass }),
       });
       const d = await r.json();
-      if (!r.ok) { setPassMsg({ text: `✕ ${d.error}`, ok: false }); return; }
+      if (!r.ok) { setPassMsg({ text: `✕ ${d.error}`, ok: false }); setChangingPass(false); return; }
       setPassMsg({ text: '✓ Password changed successfully', ok: true });
       setCurrPass(''); setNewPass(''); setConfirmPass('');
       showToast('Password changed');
     } catch {
       setPassMsg({ text: '✕ Network error', ok: false });
     }
+    setChangingPass(false);
   }
 
   const updatePref = useCallback((patch: Partial<NotificationPrefs>) => {
@@ -250,7 +255,7 @@ export default function SettingsPage() {
             <input className="form-input" type="password" placeholder="New password (min 6 chars)" value={newPass} onChange={e => setNewPass(e.target.value)} />
             <input className="form-input" type="password" placeholder="Confirm new password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
             {passMsg && <p style={{ fontSize: 12, color: passMsg.ok ? 'var(--success)' : 'var(--danger)' }}>{passMsg.text}</p>}
-            <button className="btn btn-primary self-start" onClick={handleChangePassword}>Change password</button>
+            <button className="btn btn-primary self-start" onClick={handleChangePassword} disabled={changingPass} style={{ opacity: changingPass ? 0.6 : 1 }}>{changingPass ? 'Changing…' : 'Change password'}</button>
           </div>
         </div>
       </Section>

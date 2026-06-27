@@ -32,7 +32,7 @@ export default function PYQPage() {
   const [attempted, setAttempted] = useState('');
   const [correct, setCorrect] = useState('');
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set());
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
 
   const subjects = data.subjects || [];
   const pyqData: PYQChapter[] = data.pyqData || [];
@@ -78,8 +78,8 @@ export default function PYQPage() {
     setShowModal(false);
   }
 
-  function toggleSubjectCollapse(name: string) {
-    setCollapsedSubjects(prev => {
+  function toggleSubjectExpand(name: string) {
+    setExpandedSubjects(prev => {
       const next = new Set(prev);
       next.has(name) ? next.delete(name) : next.add(name);
       return next;
@@ -139,11 +139,11 @@ export default function PYQPage() {
       )}
 
       {subjectGroups.map(({ subj, subjChaps, subjAcc, subjAtt, subjTotal, subjSessions }) => {
-        const isCollapsed = collapsedSubjects.has(subj.name);
+        const isCollapsed = !expandedSubjects.has(subj.name);
         return (
           <div key={subj.name} className="panel" style={{ padding: 0, overflow: 'hidden' }}>
             <div
-              onClick={() => toggleSubjectCollapse(subj.name)}
+              onClick={() => toggleSubjectExpand(subj.name)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', cursor: 'pointer',
                 borderBottom: isCollapsed ? 'none' : '1px solid rgba(255,255,255,0.06)',

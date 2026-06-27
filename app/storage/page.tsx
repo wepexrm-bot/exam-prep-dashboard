@@ -9,9 +9,10 @@ interface Stats { scores: number; sessions: number; pyqEntries: number; revision
 export default function StoragePage() {
   const { data, loadData, syncToServer } = useApp();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [statsError, setStatsError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/stats').then(r => r.json()).then(setStats).catch(() => {});
+    fetch('/api/stats').then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(setStats).catch(() => setStatsError(true));
   }, []);
 
   async function handleExport() {
@@ -53,7 +54,9 @@ export default function StoragePage() {
       <Card className="mb-4">
         <CardHeader title="Storage summary" />
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {stats ? [
+          {statsError ? (
+            <div className="text-[13px]" style={{ color: 'var(--danger)', gridColumn: '1 / -1' }}>Failed to load stats — check your connection</div>
+          ) : stats ? [
             ['Daily scores', stats.scores],
             ['Study sessions', stats.sessions],
             ['PYQ entries', stats.pyqEntries],

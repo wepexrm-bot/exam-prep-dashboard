@@ -35,6 +35,7 @@ export default function SubjectsPage() {
     if (showAddCh === null) return;
     const name = newChName.trim();
     if (!name) return showToast('Enter a chapter name');
+    if (subjects[showAddCh]?.chapters?.some(c => c.name.toLowerCase() === name.toLowerCase())) return showToast('Chapter already exists in this subject');
     await addChapter(showAddCh, name);
     showToast('Chapter added ');
     setNewChName('');
