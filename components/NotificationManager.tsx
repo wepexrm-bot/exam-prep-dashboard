@@ -58,7 +58,9 @@ export function NotificationManager() {
     customAlerts: [],
   };
   const cachedRef = useRef('');
+  const lastFiredRef = useRef(new Map<string, number>());
 
+  // ── Capacitor native scheduling ──
   useEffect(() => {
     let cancelled = false;
 
@@ -81,7 +83,6 @@ export function NotificationManager() {
           await LocalNotifications.requestPermissions();
         }
 
-        // Cancel all previously scheduled
         await LocalNotifications.cancel({
           notifications: Object.values(NOTIF_IDS).map(id => ({ id })),
         });
@@ -89,7 +90,6 @@ export function NotificationManager() {
         const notifications: Notif[] = [];
         const today = todayLocal();
 
-        // ── 1. Revision reminder ──────────────────────────────
         if (prefs.revisionReminder.enabled) {
           const revDue = (data.revisions || []).filter(r => {
             const next = new Date(r.lastRevised);
@@ -110,7 +110,6 @@ export function NotificationManager() {
           }
         }
 
-        // ── 2. Goals check-in ─────────────────────────────────
         if (prefs.goalsCheckIn.enabled) {
           const todayGoals = (data.goals || []).filter(g => {
             const start = g.date;
@@ -141,7 +140,6 @@ export function NotificationManager() {
           }
         }
 
-        // ── 3. Streak reminder ────────────────────────────────
         if (prefs.streakReminder.enabled) {
           const hasScoreToday = (data.dailyScores || []).some(s => s.date === today);
           const hasStudyToday = (data.studySessions || []).some(s => s.start ? dateKey(new Date(s.start)) === today : false);
@@ -167,7 +165,6 @@ export function NotificationManager() {
           }
         }
 
-        // ── 4. Weekly target check-in ─────────────────────────
         if (prefs.weeklyTarget.enabled) {
           const now = new Date();
           const monday = new Date(now);
@@ -196,7 +193,6 @@ export function NotificationManager() {
           });
         }
 
-        // ── 5. Goal deadline reminder (not user-configurable) ─
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowKey = dateKey(tomorrow);
@@ -216,7 +212,6 @@ export function NotificationManager() {
           });
         }
 
-        // ── 6. Break reminder ─────────────────────────────────
         if (prefs.breakReminder.enabled) {
           const todaySessions = (data.studySessions || []).filter(s =>
             s.start ? dateKey(new Date(s.start)) === today : false
@@ -225,7 +220,6 @@ export function NotificationManager() {
             const totalMin = todaySessions.reduce((a, s) => a + (s.durationSec || 0), 0) / 60;
             const intervalMs = clamp(prefs.breakReminder.intervalMin, 15, 480) * 60 * 1000;
 
-            // Fire once at the interval mark after the earliest session today
             const sorted = [...todaySessions].sort((a, b) =>
               new Date(a.start).getTime() - new Date(b.start).getTime()
             );
@@ -243,7 +237,6 @@ export function NotificationManager() {
           }
         }
 
-        // ── 7. Custom alerts ─────────────────────────────────
         if (prefs.customAlerts?.length > 0) {
           prefs.customAlerts.forEach((alert, idx) => {
             if (!alert.enabled) return;
@@ -280,6 +273,115 @@ export function NotificationManager() {
 
     return () => { cancelled = true; };
   }, [data.revisions, data.dailyScores, data.studySessions, data.pyqData, data.weeklyTarget, data.goals, prefs]);
+
+  // ── Web notification polling (fallback when Capacitor is unavailable) ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.Capacitor) return;
+    if (!('Notification' in window)) return;
+
+    if (Notification.permission === 'default') Notification.requestPermission();
+
+    const interval = setInterval(() => {
+      if (Notification.permission !== 'granted') return;
+
+      const now = new Date();
+      const hh = now.getHours();
+      const mm = now.getMinutes();
+      const currentMinute = hh * 60 + mm;
+      const today = todayLocal();
+
+      function shouldFire(key: string, targetH: number, targetM: number): boolean {
+        if (hh !== targetH || mm !== targetM) return false;
+        const last = lastFiredRef.current.get(key) ?? -1;
+        if (last === currentMinute) return false;
+        lastFiredRef.current.set(key, currentMinute);
+        return true;
+      }
+
+      const p = prefs;
+
+      if (p.revisionReminder.enabled) {
+        const revDue = (data.revisions || []).filter(r => {
+          const next = new Date(r.lastRevised);
+          next.setDate(next.getDate() + r.intervalDays);
+          return next <= new Date();
+        }).length;
+        if (revDue > 0 && shouldFire('rev', p.revisionReminder.hour, p.revisionReminder.minute)) {
+          new Notification('Revision due', {
+            body: `${revDue} topic${revDue > 1 ? 's' : ''} need review today.`,
+          });
+        }
+      }
+
+      if (p.goalsCheckIn.enabled) {
+        const todayGoals = (data.goals || []).filter(g => {
+          const start = g.date;
+          const end = g.endDate || g.date;
+          return today >= start && today <= end;
+        });
+        const doneCount = todayGoals.filter(g => g.done).length;
+        const totalCount = todayGoals.length;
+        if (totalCount > 0 && shouldFire('goals', p.goalsCheckIn.hour, p.goalsCheckIn.minute)) {
+          let body: string;
+          if (doneCount === totalCount) {
+            body = `All ${totalCount} goal${totalCount > 1 ? 's' : ''} completed! 🎉`;
+          } else if (doneCount === 0) {
+            body = `You haven't checked off any of your ${totalCount} goal${totalCount > 1 ? 's' : ''} today.`;
+          } else {
+            body = `${doneCount} of ${totalCount} goal${totalCount > 1 ? 's' : ''} done — keep going!`;
+          }
+          new Notification('Daily goals check-in', { body });
+        }
+      }
+
+      if (p.streakReminder.enabled && shouldFire('streak', p.streakReminder.hour, p.streakReminder.minute)) {
+        const hasScoreToday = (data.dailyScores || []).some(s => s.date === today);
+        const hasStudyToday = (data.studySessions || []).some(s => s.start ? dateKey(new Date(s.start)) === today : false);
+        const hasPYQToday = (data.pyqData || []).some(p =>
+          (p.sessions || []).some(s => s.date === today)
+        );
+        const hasGoalDoneToday = (data.goals || []).some(g => {
+          const start = g.date; const end = g.endDate || g.date;
+          return g.done && today >= start && today <= end;
+        });
+        if (!(hasScoreToday || hasStudyToday || hasPYQToday || hasGoalDoneToday)) {
+          new Notification("Keep your streak alive!", {
+            body: "You haven't logged any activity today.",
+          });
+        }
+      }
+
+      if (p.weeklyTarget.enabled && p.weeklyTarget.weekday === now.getDay() && shouldFire('weekly', p.weeklyTarget.hour, p.weeklyTarget.minute)) {
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+        monday.setHours(0, 0, 0, 0);
+        const weekSecs = (data.studySessions || [])
+          .filter(s => new Date(s.start) >= monday)
+          .reduce((a, s) => a + (s.durationSec || 0), 0);
+        const targetSecs = (data.weeklyTarget || 12) * 3600;
+        const weekPct = targetSecs > 0 ? Math.round((weekSecs / targetSecs) * 100) : 0;
+        new Notification('Weekly target check-in', {
+          body: weekPct >= 100
+            ? `You hit ${weekPct}% of your weekly target!`
+            : `You're at ${weekPct}% of your weekly study target.`,
+        });
+      }
+
+      if (p.customAlerts?.length > 0) {
+        p.customAlerts.forEach((alert, idx) => {
+          if (!alert.enabled) return;
+          if (alert.daysOfWeek.length > 0 && !alert.daysOfWeek.includes(now.getDay())) return;
+          const key = `custom-${idx}`;
+          if (shouldFire(key, alert.hour, alert.minute)) {
+            new Notification(alert.title || 'Reminder', { body: alert.body || '' });
+          }
+        });
+      }
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [prefs, data.revisions, data.dailyScores, data.studySessions, data.pyqData, data.weeklyTarget, data.goals]);
 
   return null;
 }

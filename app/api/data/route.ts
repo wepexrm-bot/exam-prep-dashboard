@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   // Whitelist allowed fields — prevents mass-assignment of arbitrary schema fields
-  const ALLOWED_FIELDS = ['goals', 'subjects', 'dailyScores', 'pyqData', 'revisions', 'studySessions', 'weeklyTarget'] as const;
+  const ALLOWED_FIELDS = ['goals', 'subjects', 'dailyScores', 'pyqData', 'revisions', 'studySessions', 'weeklyTarget', 'notificationPrefs'] as const;
   const update: Record<string, unknown> = { lastUpdated: new Date() };
   for (const key of ALLOWED_FIELDS) {
     if (key in body) update[key] = body[key];
