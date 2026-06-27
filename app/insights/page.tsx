@@ -1,22 +1,16 @@
 'use client';
 import { useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { BarChart3, TrendingUp, AlertTriangle, Zap, Clock, Award, Target, Brain } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Zap, Clock, Target, Brain, BarChart3, Award } from 'lucide-react';
 import { PageHeader, Card, CardHeader, MetricCard, Meter } from '@/components/ui';
 import { getPct } from '@/lib/utils';
 import { useExamConfig } from '@/lib/useExamConfig';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, AreaChart, Area, ScatterChart, Scatter, Cell } from 'recharts';
 
 const C = {
-  cyan: '#22D3EE',
-  green: '#4ADE80',
-  orange: '#FB923C',
-  red: '#F87171',
-  purple: '#A78BFA',
-  pink: '#F472B6',
-  muted: '#7C8089',
-  border: 'rgba(255,255,255,0.08)',
-  borderStrong: 'rgba(255,255,255,0.12)',
+  cyan: '#22D3EE', green: '#4ADE80', orange: '#FB923C', red: '#F87171',
+  purple: '#A78BFA', pink: '#F472B6', muted: '#7C8089',
+  border: 'rgba(255,255,255,0.08)', borderStrong: 'rgba(255,255,255,0.12)',
   surface: 'rgba(255,255,255,0.03)',
 };
 
@@ -29,6 +23,10 @@ function TooltipBox({ children }: { children: React.ReactNode }) {
   );
 }
 
+function parseLocalDate(s: string) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function dateKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function formatDate(s: string) { return new Date(s + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); }
+
 export default function InsightsPage() {
   const { data, examType } = useApp();
   const { config: cfg } = useExamConfig(examType);
@@ -38,85 +36,215 @@ export default function InsightsPage() {
   const sessions = data.studySessions || [];
   const pyqData = data.pyqData || [];
   const revisions = data.revisions || [];
+  const goals = data.goals || [];
 
-  // ── Derived metrics ──
-  const weekSecs = useMemo(() => {
-    const monday = new Date(); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)); monday.setHours(0, 0, 0, 0);
-    return sessions.filter(s => new Date(s.start) >= monday).reduce((a, s) => a + (s.durationSec || 0), 0);
-  }, [sessions]);
-  const totalSecs = useMemo(() => sessions.reduce((a, s) => a + (s.durationSec || 0), 0), [sessions]);
-  const totalHours = Math.round(totalSecs / 36) / 100;
-  const weekHours = Math.round(weekSecs / 36) / 100;
-  const avgAccuracy = useMemo(() => {
-    const all = scores.filter(s => s.accuracy != null);
-    return all.length ? Math.round(all.reduce((a, s) => a + s.accuracy!, 0) / all.length) : 0;
+  // ── 1. Study → Score correlation ──────────────────────────────────────
+  const studyScoreCorr = useMemo(() => {
+    return scores.map(s => {
+      const d = parseLocalDate(s.date);
+      const priorWeek = new Date(d); priorWeek.setDate(priorWeek.getDate() - 7);
+      const priorHours = sessions
+        .filter(se => {
+          const t = new Date(se.start);
+          return t >= priorWeek && t <= d;
+        })
+        .reduce((a, se) => a + (se.durationSec || 0), 0) / 3600;
+      return { date: formatDate(s.date), score: s.score, priorHours: Math.round(priorHours * 10) / 10 };
+    }).filter(s => s.priorHours > 0);
+  }, [scores, sessions]);
+
+  const corrAvg = useMemo(() => {
+    if (studyScoreCorr.length < 2) return null;
+    const avgHours = studyScoreCorr.reduce((a, s) => a + s.priorHours, 0) / studyScoreCorr.length;
+    const avgScore = studyScoreCorr.reduce((a, s) => a + s.score, 0) / studyScoreCorr.length;
+    let num = 0, denH = 0, denS = 0;
+    studyScoreCorr.forEach(s => {
+      num += (s.priorHours - avgHours) * (s.score - avgScore);
+      denH += (s.priorHours - avgHours) ** 2;
+      denS += (s.score - avgScore) ** 2;
+    });
+    const r = denH && denS ? num / Math.sqrt(denH * denS) : 0;
+    return { r: Math.round(r * 100) / 100, count: studyScoreCorr.length };
+  }, [studyScoreCorr]);
+
+  // ── 2. PYQ accuracy trend per chapter ────────────────────────────────
+  const pyqTrend = useMemo(() => {
+    return pyqData.map(ch => {
+      const sorted = [...ch.sessions].sort((a, b) => a.date.localeCompare(b.date));
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      if (sorted.length < 2 || !first || !last) return null;
+      const firstAcc = first.attempted > 0 ? Math.round((first.correct / first.attempted) * 100) : 0;
+      const lastAcc = last.attempted > 0 ? Math.round((last.correct / last.attempted) * 100) : 0;
+      const trend = lastAcc - firstAcc;
+      return {
+        chapter: ch.key.split('::').pop() || ch.key,
+        sessions: sorted.length,
+        firstAcc, lastAcc, trend,
+        declining: trend < -10,
+      };
+    }).filter(Boolean) as { chapter: string; sessions: number; firstAcc: number; lastAcc: number; trend: number; declining: boolean }[];
+  }, [pyqData]);
+
+  const decliningChapters = pyqTrend.filter(c => c.declining);
+
+  // ── 3. Revision effectiveness ─────────────────────────────────────────
+  const revisionEffectiveness = useMemo(() => {
+    return revisions.map(r => {
+      const chKey = `${r.subject}::${r.topic}`;
+      const ch = pyqData.find(p => p.key === chKey);
+      if (!ch || !ch.sessions.length) return null;
+      const next = parseLocalDate(r.lastRevised);
+      next.setDate(next.getDate() + r.intervalDays);
+      const isFresh = next > new Date();
+      const acc = ch.sessions.reduce((a, s) => a + (s.attempted > 0 ? (s.correct / s.attempted) * 100 : 0), 0) / ch.sessions.length;
+      return { topic: r.topic, acc: Math.round(acc), isFresh, intervalDays: r.intervalDays };
+    }).filter(Boolean) as { topic: string; acc: number; isFresh: boolean; intervalDays: number }[];
+  }, [revisions, pyqData]);
+
+  const freshAvg = useMemo(() => {
+    const f = revisionEffectiveness.filter(r => r.isFresh);
+    return f.length ? Math.round(f.reduce((a, r) => a + r.acc, 0) / f.length) : null;
+  }, [revisionEffectiveness]);
+  const staleAvg = useMemo(() => {
+    const s = revisionEffectiveness.filter(r => !r.isFresh);
+    return s.length ? Math.round(s.reduce((a, r) => a + r.acc, 0) / s.length) : null;
+  }, [revisionEffectiveness]);
+
+  // ── 4. Consistency & momentum ────────────────────────────────────────
+  const consistency = useMemo(() => {
+    if (scores.length < 3) return null;
+    const vals = scores.map(s => s.score);
+    const mean = vals.reduce((a, v) => a + v, 0) / vals.length;
+    const variance = vals.reduce((a, v) => a + (v - mean) ** 2, 0) / vals.length;
+    const stdDev = Math.sqrt(variance);
+    const recent = vals.slice(-3);
+    const momentum = recent.length === 3 ? (recent[2] - recent[0]) / 2 : 0;
+    return {
+      stdDev: Math.round(stdDev * 10) / 10,
+      cv: mean ? Math.round((stdDev / mean) * 100) : 0,
+      momentum: Math.round(momentum * 10) / 10,
+      improving: momentum > 2,
+      declining: momentum < -2,
+      stable: Math.abs(momentum) <= 2,
+    };
   }, [scores]);
-  const avgSubPct = subjects.length ? Math.round(subjects.reduce((a, s) => a + getPct(s), 0) / subjects.length) : 0;
 
-  // ── Weak areas ──
-  const weakSubjects = useMemo(() => {
-    return subjects.map(s => ({
-      name: s.name, pctVal: getPct(s),
-      pyqAccuracy: (() => {
-        const chs = pyqData.filter(p => p.key.startsWith(s.name + '::'));
-        const all = chs.flatMap(c => c.sessions.map(se => se.accuracy));
-        return all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : null;
-      })(),
-    })).filter(s => s.pctVal < 60 || (s.pyqAccuracy != null && s.pyqAccuracy < 50))
-      .sort((a, b) => a.pctVal - b.pctVal);
-  }, [subjects, pyqData]);
+  // ── 5. Subject health matrix ─────────────────────────────────────────
+  const subjectHealth = useMemo(() => {
+    return subjects.map(s => {
+      const chapters = s.chapters || [];
+      const pct = getPct(s);
+      const chKeys = pyqData.filter(p => p.key.startsWith(s.name + '::'));
+      const pyqSessions = chKeys.reduce((a, c) => a + c.sessions.length, 0);
+      const totalAtt = chKeys.reduce((a, c) => a + c.sessions.reduce((sa, se) => sa + se.attempted, 0), 0);
+      const totalCor = chKeys.reduce((a, c) => a + c.sessions.reduce((sa, se) => sa + se.correct, 0), 0);
+      const pyqAcc = totalAtt > 0 ? Math.round((totalCor / totalAtt) * 100) : null;
+      const revCount = revisions.filter(r => r.subject === s.name).length;
+      return {
+        name: s.name, pct, pyqAcc, pyqSessions, revCount,
+        health: pct >= 70 && (pyqAcc == null || pyqAcc >= 60) ? 'good' : pct >= 40 ? 'ok' : 'weak',
+      };
+    });
+  }, [subjects, pyqData, revisions]);
 
-  // ── Readiness score ──
-  const readinessScore = useMemo(() => {
-    const syllabusFactor = avgSubPct / 100;
-    const accuracyFactor = avgAccuracy / 100;
-    function parseLocalDate(s: string) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
-    const overdueRevs = revisions.filter(r => {
-      const next = parseLocalDate(r.lastRevised); next.setDate(next.getDate() + r.intervalDays); return next <= new Date();
-    }).length;
-    const revFactor = revisions.length ? (revisions.length - overdueRevs) / revisions.length : 0.5;
-    return Math.round((syllabusFactor * 0.35 + accuracyFactor * 0.4 + revFactor * 0.25) * 100);
-  }, [avgSubPct, avgAccuracy, revisions]);
+  // ── 6. Study pattern (hour × day heatmap) ────────────────────────────
+  const studyPattern = useMemo(() => {
+    const hourBuckets: number[] = new Array(24).fill(0);
+    const dayBuckets: number[] = new Array(7).fill(0);
+    sessions.forEach(s => {
+      if (!s.start) return;
+      const d = new Date(s.start);
+      hourBuckets[d.getHours()] += (s.durationSec || 0) / 60;
+      dayBuckets[d.getDay()] += (s.durationSec || 0) / 60;
+    });
+    const peakHour = hourBuckets.indexOf(Math.max(...hourBuckets));
+    const peakDay = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayBuckets.indexOf(Math.max(...dayBuckets))];
+    const totalMin = hourBuckets.reduce((a, v) => a + v, 0);
+    const hourData = hourBuckets.map((m, h) => ({ hour: `${h}:00`, min: Math.round(m) }));
+    const dayData = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d, i) => ({ day: d, min: Math.round(dayBuckets[i]) }));
+    return { peakHour, peakDay, totalMin, hourData, dayData };
+  }, [sessions]);
 
-  // ── Weekly study hours (last 8 weeks) ──
-  const weeklyChart = useMemo(() => {
-    const weeks: { label: string; hours: number }[] = [];
-    for (let w = 7; w >= 0; w--) {
-      const end = new Date(); end.setDate(end.getDate() - (end.getDay() + 6) % 7 - w * 7);
-      const start = new Date(end); start.setDate(start.getDate() - 6);
-      start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999);
-      const secs = sessions.filter(s => {
-        const t = new Date(s.start).getTime(); return t >= start.getTime() && t <= end.getTime();
-      }).reduce((a, s) => a + (s.durationSec || 0), 0);
-      weeks.push({
-        label: start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-        hours: Math.round(secs / 36) / 100,
+  // ── Cumulative recommendation engine ─────────────────────────────────
+  const recommendations = useMemo(() => {
+    const recs: { icon: React.ReactNode; text: string; color: string; bg: string }[] = [];
+
+    if (decliningChapters.length > 0) {
+      recs.push({
+        icon: <TrendingUp size={14} />, color: C.red,
+        bg: 'rgba(248,113,113,0.08)',
+        text: `Your accuracy is dropping in ${decliningChapters.length} chapter${decliningChapters.length > 1 ? 's' : ''} (${decliningChapters.map(c => c.chapter).join(', ')}). Revisit fundamentals.`,
       });
     }
-    return weeks;
-  }, [sessions]);
 
-  // ── Score progression ──
-  const scoreChart = useMemo(() => {
-    return scores.slice(-20).map(s => ({
-      date: new Date(s.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-      score: s.score,
-      accuracy: s.accuracy,
-    }));
-  }, [scores]);
-
-  // ── Accuracy trend ──
-  const accuracyTrend = useMemo(() => {
-    if (scoreChart.length < 4) return scoreChart.map(s => ({ date: s.date, accuracy: s.accuracy }));
-    const chunk = Math.max(1, Math.floor(scoreChart.length / 4));
-    const grouped: { date: string; accuracy: number }[] = [];
-    for (let i = 0; i < scoreChart.length; i += chunk) {
-      const slice = scoreChart.slice(i, i + chunk);
-      const avg = Math.round(slice.reduce((a, s) => a + (s.accuracy || 0), 0) / slice.length);
-      grouped.push({ date: slice[0].date, accuracy: avg });
+    if (staleAvg != null && freshAvg != null && staleAvg < freshAvg - 10) {
+      recs.push({
+        icon: <Brain size={14} />, color: C.orange,
+        bg: 'rgba(251,146,60,0.08)',
+        text: `Revised topics average ${freshAvg}% accuracy vs ${staleAvg}% for stale — consistent revision boosts scores by ${freshAvg - staleAvg}% on average.`,
+      });
     }
-    return grouped;
-  }, [scoreChart]);
+
+    if (consistency && consistency.declining) {
+      recs.push({
+        icon: <AlertTriangle size={14} />, color: C.red,
+        bg: 'rgba(248,113,113,0.08)',
+        text: `Your scores are declining (momentum: ${consistency.momentum}). Last 3 tests averaged a drop. Consider taking a lighter week to consolidate.`,
+      });
+    }
+
+    if (consistency && consistency.stable && consistency.cv > 30) {
+      recs.push({
+        icon: <BarChart3 size={14} />, color: C.orange,
+        bg: 'rgba(251,146,60,0.08)',
+        text: `Score volatility is high (CV ${consistency.cv}%). Focus on consistent output — aim for ±10% variation.`,
+      });
+    }
+
+    if (corrAvg && corrAvg.r > 0.3) {
+      recs.push({
+        icon: <Zap size={14} />, color: C.green,
+        bg: 'rgba(74,222,128,0.08)',
+        text: `Study hours correlate with scores (r = ${corrAvg.r}). Each additional hour of prep before a test tends to improve your result.`,
+      });
+    }
+
+    if (corrAvg && corrAvg.r < -0.2) {
+      recs.push({
+        icon: <Clock size={14} />, color: C.orange,
+        bg: 'rgba(251,146,60,0.08)',
+        text: `More study hours aren't translating to better scores. Focus on active practice (PYQs, tests) rather than passive review.`,
+      });
+    }
+
+    const weakHealth = subjectHealth.filter(s => s.health === 'weak');
+    if (weakHealth.length > 0) {
+      recs.push({
+        icon: <Target size={14} />, color: C.red,
+        bg: 'rgba(248,113,113,0.08)',
+        text: `Critical: ${weakHealth.map(s => s.name).join(', ')} need immediate attention — low syllabus completion and/or poor PYQ accuracy.`,
+      });
+    }
+
+    if (studyPattern.totalMin > 0) {
+      recs.push({
+        icon: <Clock size={14} />, color: C.cyan,
+        bg: 'rgba(34,211,238,0.08)',
+        text: `You study most effectively on ${studyPattern.peakDay}s around ${studyPattern.peakHour}:00 — schedule your toughest topics then.`,
+      });
+    }
+
+    if (recs.length === 0) {
+      recs.push({
+        icon: <Award size={14} />, color: C.green,
+        bg: 'rgba(74,222,128,0.08)',
+        text: 'No red flags detected. Keep up the balanced approach across syllabus, practice, and revision.',
+      });
+    }
+
+    return recs;
+  }, [decliningChapters, staleAvg, freshAvg, consistency, corrAvg, subjectHealth, studyPattern]);
 
   const chartTooltip = (props: any) => {
     if (!props.active || !props.payload?.length) return null;
@@ -130,14 +258,10 @@ export default function InsightsPage() {
     );
   };
 
-  function readinessColor(s: number): string {
-    return s >= 70 ? C.green : s >= 45 ? C.orange : C.red;
-  }
-
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <PageHeader title="Insights" sub={`Analytics overview for ${cfg.label}`} />
+        <PageHeader title="Insights" sub={`Cross-sectional analysis for ${cfg.label}`} />
         <span style={{
           fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 99,
           background: 'rgba(251,146,60,0.15)', border: '1px solid rgba(251,146,60,0.3)', color: '#FB923C',
@@ -145,135 +269,184 @@ export default function InsightsPage() {
         }}>Beta</span>
       </div>
 
-      {/* ── Exam Readiness Score ── */}
-      <div style={{ marginBottom: 14 }}><Card>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '6px 0' }}>
-          <div style={{ position: 'relative', width: 90, height: 90, flexShrink: 0 }}>
-            <svg width="90" height="90" viewBox="0 0 90 90">
-              <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
-              <circle cx="45" cy="45" r="38" fill="none" stroke={readinessColor(readinessScore)} strokeWidth="6"
-                strokeLinecap="round" strokeDasharray={238.8}
-                strokeDashoffset={238.8 - (readinessScore / 100) * 238.8}
-                transform="rotate(-90 45 45)" style={{ transition: 'stroke-dashoffset 0.8s ease' }} />
-            </svg>
-            <div style={{
-              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: 22, fontWeight: 800, color: readinessColor(readinessScore), lineHeight: 1 }}>{readinessScore}</span>
-              <span style={{ fontSize: 9, color: C.muted }}>/100</span>
-            </div>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Exam Readiness</div>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
-              Composite of syllabus coverage, accuracy, and revision freshness
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'Syllabus', pct: avgSubPct, color: C.cyan },
-                { label: 'Accuracy', pct: avgAccuracy, color: C.green },
-                { label: 'Revisions', pct: revisions.length ? Math.round((revisions.filter(r => {
-                  const [yr, mr, dr] = r.lastRevised.split('-').map(Number); const next = new Date(yr, mr - 1, dr); next.setDate(next.getDate() + r.intervalDays); return next > new Date();
-                }).length / revisions.length) * 100) : 50, color: C.purple },
-              ].map(m => (
-                <div key={m.label} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{m.label}</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: m.color }}>{m.pct}%</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Card></div>
-
-      {/* ── Quick stats ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-5">
-        <MetricCard label="Syllabus done" value={<>{avgSubPct}<sup className="text-sm font-normal" style={{ color: 'var(--muted)' }}>%</sup></>} sub="Across all subjects" />
-        <MetricCard label="Avg accuracy" value={<>{avgAccuracy}<sup className="text-sm font-normal" style={{ color: 'var(--muted)' }}>%</sup></>} sub={scores.length ? `From ${scores.length} scores` : 'No scores'} />
-        <MetricCard label="Total study" value={<>{totalHours}<sup className="text-sm font-normal" style={{ color: 'var(--muted)' }}>h</sup></>} sub="All time" />
-        <MetricCard label="This week" value={<>{weekHours}<sup className="text-sm font-normal" style={{ color: 'var(--muted)' }}>h</sup></>} sub={`Target ${data.weeklyTarget || 12}h`} />
+      {/* ── Quick health summary ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+        <MetricCard label="Score consistency" value={consistency ? `${consistency.cv}%` : '—'} sub={consistency ? `CV (${consistency.stdDev} σ)` : 'Need 3+ scores'} />
+        <MetricCard label="Study→Score corr" value={corrAvg ? `r = ${corrAvg.r}` : '—'} sub={corrAvg ? `From ${corrAvg.count} tests` : 'Need more data'} />
+        <MetricCard label="Declining chapters" value={decliningChapters.length} sub={decliningChapters.length ? 'PYQ accuracy dropping' : 'All stable or improving'} />
+        <MetricCard label="Revision delta" value={freshAvg != null && staleAvg != null ? `${freshAvg - staleAvg > 0 ? '+' : ''}${freshAvg - staleAvg}%` : '—'} sub={freshAvg != null ? 'Fresh vs stale accuracy' : 'Need revision + PYQ data'} />
       </div>
 
       {/* ── Charts row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
 
-        {/* Weekly study hours bar chart */}
+        {/* Study hours vs Score scatter */}
         <Card>
-          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} style={{ color: C.cyan }} /> Weekly study hours</span>} />
-          {weeklyChart.every(d => d.hours === 0) ? (
+          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} style={{ color: C.cyan }} /> Study hours vs Score</span>} />
+          {studyScoreCorr.length < 2 ? (
             <div className="text-center py-6 text-[13px]" style={{ color: C.muted }}>
-              No study sessions logged yet. Start the timer to see your weekly trend.
+              Log tests with study sessions in the prior 7 days to see the correlation.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={weeklyChart} margin={{ top: 8, right: 4, left: -14, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 9, fill: C.muted }} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} unit="h" />
+            <ResponsiveContainer width="100%" height={200}>
+              <ScatterChart margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="priorHours" name="Study hours" unit="h" tick={{ fontSize: 9, fill: C.muted }} axisLine={false} tickLine={false} />
+                <YAxis dataKey="score" name="Score" unit="%" tick={{ fontSize: 9, fill: C.muted }} axisLine={false} tickLine={false} domain={[0, 100]} />
                 <Tooltip content={chartTooltip} cursor={{ fill: C.surface }} />
-                <Bar dataKey="hours" name="Hours" radius={[5, 5, 0, 0]} fill={`url(#hoursGrad)`} maxBarSize={28} />
-                <defs>
-                  <linearGradient id="hoursGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={C.cyan} stopOpacity={0.85} />
-                    <stop offset="100%" stopColor={C.cyan} stopOpacity={0.3} />
-                  </linearGradient>
-                </defs>
-              </BarChart>
+                <Scatter data={studyScoreCorr} fill={C.cyan}>
+                  {studyScoreCorr.map((_, i) => (
+                    <Cell key={i} fill={C.cyan} fillOpacity={0.6} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
             </ResponsiveContainer>
           )}
         </Card>
 
-        {/* Score progression area chart */}
+        {/* PYQ accuracy trend (first vs last session) */}
         <Card>
-          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><TrendingUp size={14} style={{ color: C.green }} /> Score progression</span>} />
-          {scoreChart.length < 2 ? (
+          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><TrendingUp size={14} style={{ color: C.purple }} /> PYQ accuracy trend</span>} />
+          {pyqTrend.length === 0 ? (
             <div className="text-center py-6 text-[13px]" style={{ color: C.muted }}>
-              Log at least 2 test scores to see your progression trend.
+              Complete at least 2 PYQ sessions per chapter to see trends.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={scoreChart} margin={{ top: 8, right: 4, left: -14, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={C.green} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={C.green} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 9, fill: C.muted }} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} unit="%" />
-                <Tooltip content={chartTooltip} />
-                <Area type="monotone" dataKey="score" name="Score" stroke={C.green} strokeWidth={2} fill="url(#scoreGrad)" dot={{ r: 3, fill: C.green, stroke: 'none' }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col gap-2">
+              {pyqTrend.slice(0, 6).map(c => (
+                <div key={c.chapter} style={{ padding: '8px 10px', borderRadius: 8, background: C.surface }}>
+                  <div className="flex justify-between text-[12px] mb-1">
+                    <span style={{ color: 'var(--text)' }}>{c.chapter}</span>
+                    <span style={{ color: c.declining ? C.red : C.green, fontWeight: 600 }}>
+                      {c.firstAcc}% → {c.lastAcc}% ({c.trend > 0 ? '+' : ''}{c.trend})
+                    </span>
+                  </div>
+                  <Meter pct={Math.min(100, Math.max(0, c.lastAcc))} color={c.declining ? C.red : C.green} />
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{c.sessions} sessions</div>
+                </div>
+              ))}
+            </div>
           )}
         </Card>
       </div>
 
-      {/* ── Weak areas + Subject completion ── */}
+      {/* ── Study pattern + Subject health ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
         <Card>
-          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={14} style={{ color: C.orange }} /> Weak areas</span>} />
-          {weakSubjects.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-[13px]" style={{ color: C.muted }}>
-              <Award size={32} strokeWidth={1.5} style={{ color: C.green }} />
-              No weak spots detected — you're on track!
+          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} style={{ color: C.cyan }} /> Study pattern</span>} />
+          {studyPattern.totalMin === 0 ? (
+            <div className="text-center py-6 text-[13px]" style={{ color: C.muted }}>
+              Start the study timer to see your pattern analysis.
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-4 text-[12px] mb-3" style={{ color: C.muted }}>
+                <span>Peak day: <strong style={{ color: 'var(--text)' }}>{studyPattern.peakDay}</strong></span>
+                <span>Peak hour: <strong style={{ color: 'var(--text)' }}>{studyPattern.peakHour}:00</strong></span>
+                <span>Total: <strong style={{ color: 'var(--text)' }}>{Math.round(studyPattern.totalMin / 60)}h</strong></span>
+              </div>
+              <div className="grid grid-cols-7 gap-1 mb-3">
+                {studyPattern.dayData.map(d => {
+                  const maxMin = Math.max(...studyPattern.dayData.map(x => x.min), 1);
+                  const pct = d.min / maxMin;
+                  return (
+                    <div key={d.day} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 9, color: C.muted, marginBottom: 2 }}>{d.day}</div>
+                      <div style={{
+                        height: 50, borderRadius: 4, background: C.surface, position: 'relative', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          position: 'absolute', bottom: 0, left: 0, right: 0,
+                          height: `${Math.max(5, pct * 100)}%`, borderRadius: 4,
+                          background: `rgba(34,211,238,${0.2 + pct * 0.6})`,
+                          transition: 'height 0.3s',
+                        }} />
+                      </div>
+                      <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{d.min}m</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="grid grid-cols-6 gap-1">
+                {studyPattern.hourData.filter((_, i) => i % 4 === 0).map(d => {
+                  const maxMin = Math.max(...studyPattern.hourData.map(x => x.min), 1);
+                  const pct = d.min / maxMin;
+                  return (
+                    <div key={d.hour} style={{ textAlign: 'center' }}>
+                      <div style={{
+                        height: 30, borderRadius: 3, background: C.surface, position: 'relative', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          position: 'absolute', bottom: 0, left: 0, right: 0,
+                          height: `${Math.max(5, pct * 100)}%`, borderRadius: 3,
+                          background: `rgba(34,211,238,${0.2 + pct * 0.6})`,
+                        }} />
+                      </div>
+                      <div style={{ fontSize: 8, color: C.muted, marginTop: 1 }}>{d.hour}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BarChart3 size={14} style={{ color: C.orange }} /> Subject health matrix</span>} />
+          {subjectHealth.length === 0 ? (
+            <div className="text-[13px] py-4" style={{ color: C.muted }}>No subjects added.</div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {subjectHealth.map(s => (
+                <div key={s.name} style={{
+                  padding: '10px 12px', borderRadius: 10,
+                  background: s.health === 'good' ? 'rgba(74,222,128,0.06)' : s.health === 'ok' ? C.surface : 'rgba(248,113,113,0.06)',
+                }}>
+                  <div className="flex justify-between text-[13px] mb-1">
+                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{s.name}</span>
+                    <span style={{ color: s.health === 'good' ? C.green : s.health === 'ok' ? C.orange : C.red, fontWeight: 700 }}>
+                      {s.pct}% syllabus
+                    </span>
+                  </div>
+                  <Meter pct={s.pct} color={s.health === 'good' ? C.green : s.health === 'ok' ? C.orange : C.red} />
+                  <div className="flex gap-3 text-[11px] mt-1.5" style={{ color: C.muted }}>
+                    {s.pyqAcc != null && <span>PYQ accuracy: <strong style={{ color: s.pyqAcc >= 60 ? C.green : C.orange }}>{s.pyqAcc}%</strong></span>}
+                    <span>PYQ sessions: <strong style={{ color: 'var(--text)' }}>{s.pyqSessions}</strong></span>
+                    <span>Revisions: <strong style={{ color: 'var(--text)' }}>{s.revCount}</strong></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* ── Revision effectiveness ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+        <Card>
+          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Brain size={14} style={{ color: C.purple }} /> Revision effectiveness</span>} />
+          {revisionEffectiveness.length === 0 ? (
+            <div className="text-center py-6 text-[13px]" style={{ color: C.muted }}>
+              Log revisions with PYQ sessions on the same topic to measure effectiveness.
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {weakSubjects.map(s => (
-                <div key={s.name} style={{ padding: '10px 12px', borderRadius: 10, background: C.surface }}>
-                  <div className="flex justify-between text-[13px] mb-1">
-                    <span style={{ color: 'var(--text)' }}>{s.name}</span>
-                    <span style={{ color: s.pctVal < 40 ? C.red : C.orange, fontWeight: 700 }}>{s.pctVal}%</span>
+              {freshAvg != null && staleAvg != null && (
+                <div className="flex gap-4 text-[12px] mb-2" style={{ color: C.muted }}>
+                  <span>Fresh topics: <strong style={{ color: C.green }}>{freshAvg}%</strong></span>
+                  <span>Stale topics: <strong style={{ color: C.red }}>{staleAvg}%</strong></span>
+                  <span>Delta: <strong style={{ color: freshAvg > staleAvg ? C.green : C.red }}>{freshAvg - staleAvg > 0 ? '+' : ''}{freshAvg - staleAvg}%</strong></span>
+                </div>
+              )}
+              {revisionEffectiveness.slice(0, 5).map(r => (
+                <div key={r.topic} style={{ padding: '8px 10px', borderRadius: 8, background: C.surface }}>
+                  <div className="flex justify-between text-[12px]">
+                    <span style={{ color: 'var(--text)' }}>{r.topic}</span>
+                    <span style={{ color: r.isFresh ? C.green : C.muted, fontWeight: 600 }}>{r.acc}%</span>
                   </div>
-                  <Meter pct={s.pctVal} color={s.pctVal < 40 ? C.red : C.orange} />
-                  {s.pyqAccuracy != null && (
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
-                      PYQ accuracy: <span style={{ color: s.pyqAccuracy < 40 ? C.red : C.orange, fontWeight: 600 }}>{s.pyqAccuracy}%</span>
-                    </div>
-                  )}
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>
+                    {r.isFresh ? `Revised ${r.intervalDays}d cycle` : 'Overdue for revision'}
+                  </div>
                 </div>
               ))}
             </div>
@@ -281,74 +454,14 @@ export default function InsightsPage() {
         </Card>
 
         <Card>
-          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BarChart3 size={14} style={{ color: C.cyan }} /> Subject completion</span>} />
-          <div className="flex flex-col gap-2.5">
-            {subjects.length === 0 ? (
-              <div className="text-[13px] py-4" style={{ color: C.muted }}>No subjects added yet.</div>
-            ) : (
-              subjects.map(s => {
-                const pct = getPct(s);
-                return (
-                  <div key={s.name}>
-                    <div className="flex justify-between text-[13px] mb-1">
-                      <span style={{ color: 'var(--text)' }}>{s.name}</span>
-                      <span style={{ color: pct >= 80 ? C.green : pct >= 50 ? C.orange : C.red, fontWeight: 600 }}>{pct}%</span>
-                    </div>
-                    <Meter pct={pct} color={pct >= 80 ? C.green : pct >= 50 ? C.orange : C.red} />
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* ── Study breakdown + Recommendations ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <Card>
-          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Brain size={14} style={{ color: C.purple }} /> Study breakdown</span>} />
-          <div className="flex flex-col gap-2.5 text-[13px]">
-            <div className="flex justify-between"><span style={{ color: C.muted }}>Total sessions</span><strong style={{ color: 'var(--text)' }}>{sessions.length}</strong></div>
-            <div className="flex justify-between"><span style={{ color: C.muted }}>Test scores logged</span><strong style={{ color: 'var(--text)' }}>{scores.length}</strong></div>
-            <div className="flex justify-between"><span style={{ color: C.muted }}>PYQ chapters</span><strong style={{ color: 'var(--text)' }}>{pyqData.length}</strong></div>
-            <div className="flex justify-between"><span style={{ color: C.muted }}>PYQ sessions</span><strong style={{ color: 'var(--text)' }}>{pyqData.reduce((a, p) => a + p.sessions.length, 0)}</strong></div>
-            <div className="flex justify-between"><span style={{ color: C.muted }}>Revisions logged</span><strong style={{ color: 'var(--text)' }}>{revisions.length}</strong></div>
-            <div className="flex justify-between"><span style={{ color: C.muted }}>Weekly target</span><strong style={{ color: 'var(--text)' }}>{data.weeklyTarget || 12}h</strong></div>
-          </div>
-        </Card>
-
-        <Card>
           <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Target size={14} style={{ color: C.pink }} /> Recommendations</span>} />
           <div className="flex flex-col gap-2 text-[13px]">
-            {weekHours < (data.weeklyTarget || 12) && (
-              <div className="flex items-start gap-2.5 p-2.5 rounded-lg" style={{ background: 'rgba(251,146,60,0.08)' }}>
-                <span style={{ color: C.orange, flexShrink: 0, marginTop: 1 }}><Zap size={14} /></span>
-                <span style={{ color: 'var(--text)' }}>You're behind your weekly study target. Try adding more study sessions.</span>
+            {recommendations.map((r, i) => (
+              <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-lg" style={{ background: r.bg }}>
+                <span style={{ color: r.color, flexShrink: 0, marginTop: 1 }}>{r.icon}</span>
+                <span style={{ color: 'var(--text)' }}>{r.text}</span>
               </div>
-            )}
-            {weakSubjects.length > 0 && (
-              <div className="flex items-start gap-2.5 p-2.5 rounded-lg" style={{ background: 'rgba(248,113,113,0.08)' }}>
-                <span style={{ color: C.red, flexShrink: 0, marginTop: 1 }}><AlertTriangle size={14} /></span>
-                <span style={{ color: 'var(--text)' }}>Focus on <strong>{weakSubjects[0].name}</strong> — your weakest subject ({weakSubjects[0].pctVal}% done).</span>
-              </div>
-            )}
-            {avgAccuracy > 0 && avgAccuracy < 60 && (
-              <div className="flex items-start gap-2.5 p-2.5 rounded-lg" style={{ background: 'rgba(248,113,113,0.08)' }}>
-                <span style={{ color: C.red, flexShrink: 0, marginTop: 1 }}><TrendingUp size={14} /></span>
-                <span style={{ color: 'var(--text)' }}>Your accuracy is {avgAccuracy}% — revise fundamentals and practice more PYQs.</span>
-              </div>
-            )}
-            {avgSubPct >= 80 && weekHours >= (data.weeklyTarget || 12) && (
-              <div className="flex items-start gap-2.5 p-2.5 rounded-lg" style={{ background: 'rgba(74,222,128,0.08)' }}>
-                <span style={{ color: C.green, flexShrink: 0, marginTop: 1 }}><Award size={14} /></span>
-                <span style={{ color: 'var(--text)' }}>Great pace! Keep up the consistency.</span>
-              </div>
-            )}
-            {(weekHours === 0 && sessions.length === 0) && (
-              <div className="text-center py-4" style={{ color: C.muted }}>
-                Start logging study sessions and scores to see personalized recommendations.
-              </div>
-            )}
+            ))}
           </div>
         </Card>
       </div>
