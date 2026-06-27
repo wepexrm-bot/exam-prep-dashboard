@@ -345,15 +345,15 @@ export default function GoalsCalendarPage() {
                     animation: `goalRowIn 0.3s ease ${idx * 0.04}s both`,
                   }}>
                     <button
-                      onClick={() => { if (selectedDate && selectedDate < todayK) return showToast('Cannot modify goals on a past date'); toggleGoal(g.id); }}
+                      onClick={() => { if (selectedDate && selectedDate !== todayK) return showToast(selectedDate > todayK ? 'Cannot check off goals on a future date' : 'Cannot modify goals on a past date'); toggleGoal(g.id); }}
                       style={{
-                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate < todayK ? 'not-allowed' : 'pointer',
+                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate !== todayK ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: g.done ? '#4ADE80' : 'transparent',
                         border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
                         boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
                         transition: 'all 0.15s',
-                        opacity: selectedDate && selectedDate < todayK ? 0.4 : 1,
+                        opacity: selectedDate && selectedDate !== todayK ? 0.4 : 1,
                       }}
                     >{g.done && I.check}</button>
 
@@ -389,15 +389,15 @@ export default function GoalsCalendarPage() {
                     opacity: g.done ? 0.55 : 1,
                   }}>
                     <button
-                      onClick={() => { if (selectedDate && selectedDate < todayK) return showToast('Cannot modify goals on a past date'); toggleGoal(g.id); }}
+                      onClick={() => { if (selectedDate && selectedDate !== todayK) return showToast(selectedDate > todayK ? 'Cannot check off goals on a future date' : 'Cannot modify goals on a past date'); toggleGoal(g.id); }}
                       style={{
-                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate < todayK ? 'not-allowed' : 'pointer',
+                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate !== todayK ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: g.done ? '#4ADE80' : 'transparent',
                         border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
                         boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
                         transition: 'all 0.15s',
-                        opacity: selectedDate && selectedDate < todayK ? 0.4 : 1,
+                        opacity: selectedDate && selectedDate !== todayK ? 0.4 : 1,
                       }}
                     >{g.done && I.check}</button>
                     <span style={{ color: '#F87171', flexShrink: 0 }}>{I.flag}</span>
