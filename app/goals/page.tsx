@@ -345,15 +345,15 @@ export default function GoalsCalendarPage() {
                     animation: `goalRowIn 0.3s ease ${idx * 0.04}s both`,
                   }}>
                     <button
-                      onClick={() => { if (selectedDate && selectedDate !== todayK) return showToast(selectedDate > todayK ? 'Cannot check off goals on a future date' : 'Cannot modify goals on a past date'); toggleGoal(g.id); }}
+                      onClick={() => { if (selectedDate && selectedDate < todayK) return showToast('Cannot modify goals on a past date'); toggleGoal(g.id); }}
                       style={{
-                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate !== todayK ? 'not-allowed' : 'pointer',
+                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate < todayK ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: g.done ? '#4ADE80' : 'transparent',
                         border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
                         boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
                         transition: 'all 0.15s',
-                        opacity: selectedDate && selectedDate !== todayK ? 0.4 : 1,
+                        opacity: selectedDate && selectedDate < todayK ? 0.4 : 1,
                       }}
                     >{g.done && I.check}</button>
 
@@ -381,39 +381,20 @@ export default function GoalsCalendarPage() {
 
               {selectedDeadlines.map((g, idx) => {
                 const tc = TAG_COLORS[g.tag] || TAG_COLORS.Other;
-                const isFuture = selectedDate != null && selectedDate > todayK;
-                const isPast = selectedDate != null && selectedDate < todayK;
                 return (
                   <div key={`deadline-${g.id}`} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
                     background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)',
                     animation: `goalRowIn 0.3s ease ${(displayGoals.length + idx) * 0.04}s both`,
-                    opacity: g.done ? 0.55 : 1,
                   }}>
-                    <button
-                      onClick={() => { if (isFuture || isPast) return showToast(isFuture ? 'Cannot check off goals on a future date' : 'Cannot modify goals on a past date'); toggleGoal(g.id); }}
-                      style={{
-                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: isFuture || isPast ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: g.done ? '#4ADE80' : 'transparent',
-                        border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
-                        boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
-                        transition: 'all 0.15s',
-                        opacity: isFuture || isPast ? 0.4 : 1,
-                      }}
-                    >{g.done && I.check}</button>
-                    <span style={{ color: g.done ? '#4ADE80' : '#F87171', flexShrink: 0 }}>{g.done ? I.check : I.flag}</span>
+                    <span style={{ color: '#F87171', flexShrink: 0 }}>{I.flag}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: '#E5E7EB', textDecoration: g.done ? 'line-through' : 'none' }}>{g.text}</div>
+                      <div style={{ fontSize: 13, color: '#E5E7EB' }}>{g.text}</div>
                       <div style={{ fontSize: 10, color: '#F87171', marginTop: 2 }}>
                         Started {new Date(g.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · Due today
                       </div>
                     </div>
                     <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 99, flexShrink: 0, background: tc.bg, color: tc.color }}>{g.tag}</span>
-                    <button
-                      onClick={() => { if (isPast) return showToast('Cannot modify goals on a past date'); deleteGoal(g.id); }}
-                      style={{ background: 'none', border: 'none', color: isPast ? 'rgba(255,255,255,0.15)' : 'var(--muted)', cursor: isPast ? 'not-allowed' : 'pointer', padding: '2px 4px', flexShrink: 0, display: 'flex' }}
-                    >{I.trash}</button>
                   </div>
                 );
               })}
