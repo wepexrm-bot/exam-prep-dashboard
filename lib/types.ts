@@ -44,12 +44,18 @@ export interface PYQChapter {
   sessions: PYQSession[];
 }
 
+export type Confidence = 'easy' | 'medium' | 'hard';
+
 export interface Revision {
   topic: string;
   subject: string;
+  chapter?: string;
   intervalDays: number;
   notes: string;
   lastRevised: string;
+  easinessFactor: number;
+  repetitions: number;
+  lastConfidence?: Confidence;
 }
 
 export interface StudySession {

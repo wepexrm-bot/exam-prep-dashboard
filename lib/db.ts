@@ -69,8 +69,10 @@ export interface UserDoc {
 
 export async function getUsersCollection() {
   const conn = await clientPromise;
-  const db = conn.db(); // uses db name from connection string (gate-prep)
-  return db.collection<UserDoc>('users');
+  const db = conn.db();
+  const col = db.collection<UserDoc>('users');
+  await col.createIndex({ email: 1 }, { unique: true, background: true });
+  return col;
 }
 
 export function toObjectId(id: string) {

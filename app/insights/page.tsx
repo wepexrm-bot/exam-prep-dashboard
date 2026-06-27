@@ -91,14 +91,22 @@ export default function InsightsPage() {
   // ── 3. Revision effectiveness ─────────────────────────────────────────
   const revisionEffectiveness = useMemo(() => {
     return revisions.map(r => {
-      const chKey = `${r.subject}::${r.topic}`;
-      const ch = pyqData.find(p => p.key === chKey);
-      if (!ch || !ch.sessions.length) return null;
+      const subjectChs = pyqData.filter(p => p.key.startsWith(r.subject + '::'));
+      let chs: typeof subjectChs;
+      if (r.chapter) {
+        chs = subjectChs.filter(p => p.key === `${r.subject}::${r.chapter}`);
+      } else {
+        chs = subjectChs;
+      }
+      chs = chs.filter(c => c.sessions.length > 0);
+      if (!chs.length) return null;
       const next = parseLocalDate(r.lastRevised);
       next.setDate(next.getDate() + r.intervalDays);
       const isFresh = next > new Date();
-      const acc = ch.sessions.reduce((a, s) => a + (s.attempted > 0 ? (s.correct / s.attempted) * 100 : 0), 0) / ch.sessions.length;
-      return { topic: r.topic, acc: Math.round(acc), isFresh, intervalDays: r.intervalDays };
+      const allAcc = chs.flatMap(c => c.sessions.map(s => s.attempted > 0 ? (s.correct / s.attempted) * 100 : 0));
+      const acc = allAcc.length ? allAcc.reduce((a, v) => a + v, 0) / allAcc.length : 0;
+      const label = r.chapter || r.topic || `All ${r.subject} chapters`;
+      return { topic: label, acc: Math.round(acc), isFresh, intervalDays: r.intervalDays };
     }).filter(Boolean) as { topic: string; acc: number; isFresh: boolean; intervalDays: number }[];
   }, [revisions, pyqData]);
 
@@ -131,23 +139,6 @@ export default function InsightsPage() {
   }, [scores]);
 
   // ── 5. Subject health matrix ─────────────────────────────────────────
-  const subjectHealth = useMemo(() => {
-    return subjects.map(s => {
-      const chapters = s.chapters || [];
-      const pct = getPct(s);
-      const chKeys = pyqData.filter(p => p.key.startsWith(s.name + '::'));
-      const pyqSessions = chKeys.reduce((a, c) => a + c.sessions.length, 0);
-      const totalAtt = chKeys.reduce((a, c) => a + c.sessions.reduce((sa, se) => sa + se.attempted, 0), 0);
-      const totalCor = chKeys.reduce((a, c) => a + c.sessions.reduce((sa, se) => sa + se.correct, 0), 0);
-      const pyqAcc = totalAtt > 0 ? Math.round((totalCor / totalAtt) * 100) : null;
-      const revCount = revisions.filter(r => r.subject === s.name).length;
-      return {
-        name: s.name, pct, pyqAcc, pyqSessions, revCount,
-        health: pct >= 70 && (pyqAcc == null || pyqAcc >= 60) ? 'good' : pct >= 40 ? 'ok' : 'weak',
-      };
-    });
-  }, [subjects, pyqData, revisions]);
-
   // ── 6. Study pattern (hour × day heatmap) ────────────────────────────
   const studyPattern = useMemo(() => {
     const hourBuckets: number[] = new Array(24).fill(0);
@@ -218,12 +209,12 @@ export default function InsightsPage() {
       });
     }
 
-    const weakHealth = subjectHealth.filter(s => s.health === 'weak');
-    if (weakHealth.length > 0) {
+    const weakSubjs = subjects.filter(s => getPct(s) < 50);
+    if (weakSubjs.length > 0) {
       recs.push({
         icon: <Target size={14} />, color: C.red,
         bg: 'rgba(248,113,113,0.08)',
-        text: `Critical: ${weakHealth.map(s => s.name).join(', ')} need immediate attention — low syllabus completion and/or poor PYQ accuracy.`,
+        text: `Focus on <strong>${weakSubjs.map(s => s.name).join(', ')}</strong> — ${weakSubjs.length === 1 ? 'it\'s' : 'they\'re'} your weakest subject${weakSubjs.length > 1 ? 's' : ''} (less than 50% syllabus done).`,
       });
     }
 
@@ -244,7 +235,7 @@ export default function InsightsPage() {
     }
 
     return recs;
-  }, [decliningChapters, staleAvg, freshAvg, consistency, corrAvg, subjectHealth, studyPattern]);
+  }, [decliningChapters, staleAvg, freshAvg, consistency, corrAvg, studyPattern]);
 
   const chartTooltip = (props: any) => {
     if (!props.active || !props.payload?.length) return null;
@@ -391,34 +382,6 @@ export default function InsightsPage() {
           )}
         </Card>
 
-        <Card>
-          <CardHeader title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><BarChart3 size={14} style={{ color: C.orange }} /> Subject health matrix</span>} />
-          {subjectHealth.length === 0 ? (
-            <div className="text-[13px] py-4" style={{ color: C.muted }}>No subjects added.</div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {subjectHealth.map(s => (
-                <div key={s.name} style={{
-                  padding: '10px 12px', borderRadius: 10,
-                  background: s.health === 'good' ? 'rgba(74,222,128,0.06)' : s.health === 'ok' ? C.surface : 'rgba(248,113,113,0.06)',
-                }}>
-                  <div className="flex justify-between text-[13px] mb-1">
-                    <span style={{ color: 'var(--text)', fontWeight: 600 }}>{s.name}</span>
-                    <span style={{ color: s.health === 'good' ? C.green : s.health === 'ok' ? C.orange : C.red, fontWeight: 700 }}>
-                      {s.pct}% syllabus
-                    </span>
-                  </div>
-                  <Meter pct={s.pct} color={s.health === 'good' ? C.green : s.health === 'ok' ? C.orange : C.red} />
-                  <div className="flex gap-3 text-[11px] mt-1.5" style={{ color: C.muted }}>
-                    {s.pyqAcc != null && <span>PYQ accuracy: <strong style={{ color: s.pyqAcc >= 60 ? C.green : C.orange }}>{s.pyqAcc}%</strong></span>}
-                    <span>PYQ sessions: <strong style={{ color: 'var(--text)' }}>{s.pyqSessions}</strong></span>
-                    <span>Revisions: <strong style={{ color: 'var(--text)' }}>{s.revCount}</strong></span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
       </div>
 
       {/* ── Revision effectiveness ── */}

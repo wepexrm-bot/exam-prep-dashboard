@@ -4,26 +4,35 @@ import { AppData } from '@/models/AppData';
 import { requireAuth } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
-  const auth = requireAuth(req);
-  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const auth = requireAuth(req);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  await connectDB();
-  const session = await req.json(); // { start, end, durationSec }
+    await connectDB();
+    const session = await req.json();
 
-  await AppData.updateOne(
-    { userId: auth.userId },
-    { $push: { studySessions: session }, $set: { lastUpdated: new Date() } }
-  );
-  return NextResponse.json({ ok: true });
+    await AppData.updateOne(
+      { userId: auth.userId },
+      { $push: { studySessions: session }, $set: { lastUpdated: new Date() } }
+    );
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('Sessions POST error:', err);
+    return NextResponse.json({ error: 'Failed to save session' }, { status: 500 });
+  }
 }
 
 // GET all sessions
 export async function GET(req: NextRequest) {
-  const auth = requireAuth(req);
-  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const auth = requireAuth(req);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  await connectDB();
-  let doc = await AppData.findOne({ userId: auth.userId }, 'studySessions').lean() as { studySessions?: unknown[] } | null;
-  if (!doc) doc = await AppData.findOne({ username: auth.name }, 'studySessions').lean() as { studySessions?: unknown[] } | null;
-  return NextResponse.json(doc?.studySessions || []);
+    await connectDB();
+    const doc = await AppData.findOne({ userId: auth.userId }, 'studySessions').lean() as { studySessions?: unknown[] } | null;
+    return NextResponse.json(doc?.studySessions || []);
+  } catch (err) {
+    console.error('Sessions GET error:', err);
+    return NextResponse.json({ error: 'Failed to load sessions' }, { status: 500 });
+  }
 }

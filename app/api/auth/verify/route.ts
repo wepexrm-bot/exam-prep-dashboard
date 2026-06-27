@@ -23,7 +23,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Verification failed' }, { status: 400 });
     }
     if (user.verified) {
-      return NextResponse.json({ error: 'Verification failed' }, { status: 400 });
+      return NextResponse.json({ error: 'Email already verified' }, { status: 400 });
+    }
+
+    if (code !== user.verificationCode) {
+      const attempts = (user.verifyAttempts || 0) + 1;
+      await users.updateOne({ email: normalizedEmail }, { $set: { verifyAttempts: attempts } });
+      if (attempts >= 5) {
+        await users.updateOne({ email: normalizedEmail }, { $unset: { verificationCode: '', verificationExpires: '' } });
+        return NextResponse.json({ error: 'Too many incorrect attempts. Request a new code.' }, { status: 400 });
+      }
+      return NextResponse.json({ error: 'Invalid verification code' }, { status: 400 });
+    }
+
+    if (user.verificationExpires && new Date() > user.verificationExpires) {
+      return NextResponse.json({ error: 'Verification code expired. Request a new one.' }, { status: 400 });
     }
 
     await users.updateOne(

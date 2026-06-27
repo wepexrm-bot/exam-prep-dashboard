@@ -1,7 +1,8 @@
 'use client';
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { AppData, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject, NotificationPrefs } from '@/lib/types';
+import { AppData, Confidence, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject, NotificationPrefs } from '@/lib/types';
 import { useExamConfig } from '@/lib/useExamConfig';
+import { sm2Next } from '@/lib/utils';
 
 interface AppContextType {
   data: AppData;
@@ -20,8 +21,8 @@ interface AppContextType {
   deleteScore: (date: string, title?: string) => Promise<void>;
   addPYQSession: (key: string, total: number, session: PYQSession) => Promise<void>;
   deletePYQSession: (key: string, idx: number) => Promise<void>;
-  addRevision: (rev: Omit<Revision, 'lastRevised'>) => Promise<void>;
-  markRevised: (idx: number) => Promise<void>;
+  addRevision: (rev: Omit<Revision, 'lastRevised' | 'easinessFactor' | 'repetitions' | 'lastConfidence'>) => Promise<void>;
+  markRevised: (idx: number, confidence: Confidence) => Promise<void>;
   deleteRevision: (idx: number) => Promise<void>;
   addSubject: (name: string) => Promise<void>;
   deleteSubject: (idx: number) => Promise<void>;
@@ -150,7 +151,7 @@ export function AppProvider({
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
         dailyScores: d.dailyScores || [],
         pyqData: d.pyqData || [],
-        revisions: d.revisions || [],
+        revisions: (d.revisions || []).map((r: any) => ({ easinessFactor: 2.5, repetitions: 0, ...r })),
         studySessions: d.studySessions || [],
         weeklyTarget: d.weeklyTarget || 12,
         notificationPrefs: d.notificationPrefs || defaultData.notificationPrefs,
@@ -259,17 +260,28 @@ export function AppProvider({
     });
   }, []);
 
-  const addRevision = useCallback(async (rev: Omit<Revision, 'lastRevised'>) => {
+  const addRevision = useCallback(async (rev: Omit<Revision, 'lastRevised' | 'easinessFactor' | 'repetitions' | 'lastConfidence'>) => {
     setData(prev => {
-      const revisions = [...prev.revisions, { ...rev, lastRevised: todayLocal() }];
+      const revisions = [...prev.revisions, { ...rev, lastRevised: todayLocal(), easinessFactor: 2.5, repetitions: 0, lastConfidence: undefined as Confidence | undefined }];
       apiCall('POST', '/api/data', { revisions }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, revisions };
     });
   }, []);
 
-  const markRevised = useCallback(async (idx: number) => {
+  const markRevised = useCallback(async (idx: number, confidence: Confidence) => {
     setData(prev => {
-      const revisions = prev.revisions.map((r, i) => i === idx ? { ...r, lastRevised: todayLocal() } : r);
+      const revisions = prev.revisions.map((r, i) => {
+        if (i !== idx) return r;
+        const next = sm2Next(confidence, r.intervalDays, r.easinessFactor, r.repetitions);
+        return {
+          ...r,
+          lastRevised: todayLocal(),
+          intervalDays: next.intervalDays,
+          easinessFactor: next.easinessFactor,
+          repetitions: next.repetitions,
+          lastConfidence: confidence,
+        };
+      });
       apiCall('POST', '/api/data', { revisions }).catch(() => showErrorToast('Failed to save'));
       return { ...prev, revisions };
     });

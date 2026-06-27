@@ -40,7 +40,7 @@ const PYQChapterSchema = new Schema(
 );
 
 const RevisionSchema = new Schema(
-  { topic: String, subject: String, intervalDays: Number, notes: String, lastRevised: String },
+  { topic: String, subject: String, chapter: String, intervalDays: Number, notes: String, lastRevised: String, easinessFactor: { type: Number, default: 2.5 }, repetitions: { type: Number, default: 0 }, lastConfidence: String },
   { _id: false }
 );
 

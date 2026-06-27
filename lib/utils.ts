@@ -1,4 +1,4 @@
-import { AppData, DailyScore, Subject } from './types';
+import { AppData, Confidence, DailyScore, Subject } from './types';
 
 // ── Local-date-safe key builder ──────────────────────────────
 // Never use toISOString().split('T')[0] for "today" — it converts to UTC
@@ -72,5 +72,41 @@ export function computeStreak(data: AppData): number {
   }
 
   return streak;
+}
+
+// ── SM-2 spaced repetition algorithm ──────────────────────────
+export function sm2Next(
+  confidence: Confidence,
+  currentInterval: number,
+  easinessFactor: number,
+  repetitions: number,
+): { intervalDays: number; easinessFactor: number; repetitions: number } {
+  let ef = easinessFactor;
+  let rep = repetitions;
+  let interval = currentInterval;
+
+  const q = confidence === 'easy' ? 3 : confidence === 'medium' ? 2 : 1;
+
+  // Update easiness factor
+  ef = ef + (0.1 - (3 - q) * (0.08 + (3 - q) * 0.02));
+  ef = Math.max(1.3, ef);
+
+  if (q < 2) {
+    // Hard or Medium — reset
+    rep = 0;
+    interval = 1;
+  } else {
+    // Easy — advance
+    rep += 1;
+    if (rep === 1) {
+      interval = 1;
+    } else if (rep === 2) {
+      interval = 6;
+    } else {
+      interval = Math.round(interval * ef);
+    }
+  }
+
+  return { intervalDays: interval, easinessFactor: Math.round(ef * 100) / 100, repetitions: rep };
 }
 
