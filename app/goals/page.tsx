@@ -343,14 +343,15 @@ export default function GoalsCalendarPage() {
                     animation: `goalRowIn 0.3s ease ${idx * 0.04}s both`,
                   }}>
                     <button
-                      onClick={() => toggleGoal(g.id)}
+                      onClick={() => { if (selectedDate && selectedDate < todayK) return showToast('Cannot modify goals on a past date'); toggleGoal(g.id); }}
                       style={{
-                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: 'pointer',
+                        width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate < todayK ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: g.done ? '#4ADE80' : 'transparent',
                         border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
                         boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
                         transition: 'all 0.15s',
+                        opacity: selectedDate && selectedDate < todayK ? 0.4 : 1,
                       }}
                     >{g.done && I.check}</button>
 
@@ -369,8 +370,8 @@ export default function GoalsCalendarPage() {
                     <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 99, flexShrink: 0, background: tc.bg, color: tc.color }}>{g.tag}</span>
 
                     <button
-                      onClick={() => deleteGoal(g.id)}
-                      style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '2px 4px', flexShrink: 0, display: 'flex' }}
+                      onClick={() => { if (selectedDate && selectedDate < todayK) return showToast('Cannot modify goals on a past date'); deleteGoal(g.id); }}
+                      style={{ background: 'none', border: 'none', color: selectedDate && selectedDate < todayK ? 'rgba(255,255,255,0.15)' : 'var(--muted)', cursor: selectedDate && selectedDate < todayK ? 'not-allowed' : 'pointer', padding: '2px 4px', flexShrink: 0, display: 'flex' }}
                     >{I.trash}</button>
                   </div>
                 );
