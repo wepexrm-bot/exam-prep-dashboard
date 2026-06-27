@@ -2,7 +2,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Wand2, Database, Settings, Flame, Sun, LogOut, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Wand2, Database, Settings, Flame, Sun, LogOut, GraduationCap, BarChart3 } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { EXAM_CONFIG } from '@/lib/constants';
 import { ExamType } from '@/models/User';
@@ -18,6 +18,7 @@ const I = {
   predict: <Wand2 size={16} />,
   storage: <Database size={16} />,
   settings: <Settings size={16} />,
+  insights: <BarChart3 size={16} />,
   flame: <Flame size={16} style={{ fill: '#0F172A', color: '#FB923C' }} />,
   sync: <RefreshCw size={14} />,
   moon: <Sun size={14} />,
@@ -38,6 +39,7 @@ const NAV = [
   { section: 'Performance', items: [
     { page: 'scores', icon: I.scores, label: 'Score Log' },
     { page: 'predict', icon: I.predict, label: 'Prediction' },
+    { page: 'insights', icon: I.insights, label: 'Insights' },
     { page: 'storage', icon: I.storage, label: 'Data & Backup' },
     { page: 'settings', icon: I.settings, label: 'Settings' },
   ]},

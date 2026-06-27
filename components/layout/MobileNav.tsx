@@ -1,7 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Wand2, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Wand2, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap, BarChart3 } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { EXAM_CONFIG } from '@/lib/constants';
@@ -18,6 +18,7 @@ const I = {
   predict: <Wand2 size={16} />,
   storage: <Database size={16} />,
   settings: <Settings size={16} />,
+  insights: <BarChart3 size={16} />,
   flame: <Flame size={16} style={{ fill: '#0F172A', color: '#FB923C' }} />,
   sync: <RefreshCw size={14} />,
   moon: <Sun size={14} />,
@@ -29,6 +30,7 @@ const I = {
 const BOTTOM_NAV = [
   { page: 'dashboard', icon: I.dashboard, label: 'Home' },
   { page: 'goals', icon: I.goals, label: 'Goals' },
+  { page: 'insights', icon: I.insights, label: 'Insights' },
   { page: 'studytimer', icon: I.timer, label: 'Timer' },
   { page: 'scores', icon: I.scores, label: 'Scores' },
 ];
@@ -47,6 +49,7 @@ const ALL_NAV = [
   { section: 'Performance', items: [
     { page: 'scores', icon: I.scores, label: 'Score Log' },
     { page: 'predict', icon: I.predict, label: 'Prediction' },
+    { page: 'insights', icon: I.insights, label: 'Insights' },
     { page: 'storage', icon: I.storage, label: 'Data & Backup' },
     { page: 'settings', icon: I.settings, label: 'Settings' },
   ]},
