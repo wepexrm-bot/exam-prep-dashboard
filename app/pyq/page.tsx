@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Modal, ModalActions, FormGroup, showToast } from '@/components/ui';
 import { PYQChapter, PYQSession } from '@/lib/types';
-import { Plus, Folder, FolderOpen, Trash2, ChevronDown } from 'lucide-react';
+import { Plus, Folder, FolderOpen, Trash2, ChevronDown, FileText } from 'lucide-react';
 
 function today() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
@@ -31,6 +31,7 @@ export default function PYQPage() {
   const [total, setTotal] = useState('');
   const [attempted, setAttempted] = useState('');
   const [correct, setCorrect] = useState('');
+  const [sessionNotes, setSessionNotes] = useState('');
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
 
@@ -52,7 +53,7 @@ export default function PYQPage() {
   function openModal() {
     setSelSubject(subjects[0]?.name || '');
     setSelChapter('');
-    setTotal(''); setAttempted(''); setCorrect('');
+    setTotal(''); setAttempted(''); setCorrect(''); setSessionNotes('');
     setShowModal(true);
   }
 
@@ -72,7 +73,7 @@ export default function PYQPage() {
     if (nAttempted > nTotal) return showToast('Attempted cannot exceed total questions');
     const acc = nAttempted > 0 ? Math.round((nCorrect / nAttempted) * 100) : 0;
     await addPYQSession(`${selSubject}::${chapter}`, nTotal, {
-      attempted: nAttempted, correct: nCorrect, accuracy: acc, date: today()
+      attempted: nAttempted, correct: nCorrect, accuracy: acc, date: today(), notes: sessionNotes.trim() || undefined,
     });
     showToast(`Session added to ${chapter}!`);
     setShowModal(false);
@@ -228,20 +229,28 @@ export default function PYQPage() {
                             <span style={{ fontSize: 11, fontWeight: 600, color: '#E5E7EB' }}>{st.cor}/{st.att} correct = {st.acc}%</span>
                           </div>
                           {chap.sessions.map((s: PYQSession, i: number) => (
-                            <div key={i} style={{
-                              display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', flexWrap: 'wrap',
-                              borderBottom: i < chap.sessions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                            }}>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#E5E7EB', minWidth: 56 }}>#{i + 1}</span>
-                              <span style={{ fontSize: 11, color: 'var(--muted)', flex: 1 }}>{s.attempted} attempted · {s.correct} correct</span>
-                              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 8px', borderRadius: 99, background: accBg(s.accuracy), color: accColor(s.accuracy), flexShrink: 0 }}>{s.accuracy}%</span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); if (confirm('Delete this session?')) deletePYQSession(chap.key, i); }}
-                                style={{
-                                  background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer',
-                                  padding: '2px 4px', borderRadius: 4, flexShrink: 0, display: 'flex',
-                                }}
-                              ><Trash2 size={12} /></button>
+                            <div key={i}>
+                              <div style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', flexWrap: 'wrap',
+                                borderBottom: i < chap.sessions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                              }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#E5E7EB', minWidth: 56 }}>#{i + 1}</span>
+                                <span style={{ fontSize: 11, color: 'var(--muted)', flex: 1 }}>{s.attempted} attempted · {s.correct} correct</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 8px', borderRadius: 99, background: accBg(s.accuracy), color: accColor(s.accuracy), flexShrink: 0 }}>{s.accuracy}%</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); if (confirm('Delete this session?')) deletePYQSession(chap.key, i); }}
+                                  style={{
+                                    background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer',
+                                    padding: '2px 4px', borderRadius: 4, flexShrink: 0, display: 'flex',
+                                  }}
+                                ><Trash2 size={12} /></button>
+                              </div>
+                              {s.notes && (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: '2px 0 6px 56px', fontSize: 11, color: 'var(--muted)' }}>
+                                  <FileText size={11} style={{ flexShrink: 0, marginTop: 1 }} />
+                                  <span>{s.notes}</span>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -287,6 +296,11 @@ export default function PYQPage() {
               value={correct} onChange={e => setCorrect(e.target.value)} />
           </FormGroup>
         </div>
+        <FormGroup label="Notes (optional)">
+          <textarea className="form-input" placeholder="e.g. Q7, Q12, Q34 left unattempted"
+            value={sessionNotes} onChange={e => setSessionNotes(e.target.value)}
+            style={{ minHeight: 60, resize: 'vertical', fontFamily: 'inherit', fontSize: 12 }} />
+        </FormGroup>
         <ModalActions>
           <button className="btn" onClick={() => setShowModal(false)}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSave}>Add session</button>

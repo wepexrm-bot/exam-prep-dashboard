@@ -36,6 +36,7 @@ export interface PYQSession {
   correct: number;
   accuracy: number;
   date: string;
+  notes?: string;
 }
 
 export interface PYQChapter {
