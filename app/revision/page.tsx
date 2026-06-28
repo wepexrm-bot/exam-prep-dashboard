@@ -27,6 +27,10 @@ export default function RevisionPage() {
   const revs = data.revisions || [];
   const subjects = data.subjects || [];
   const now = new Date();
+  const revCountBySubject = revs.reduce((acc: Record<string, number>, r) => {
+    acc[r.subject] = (acc[r.subject] || 0) + 1;
+    return acc;
+  }, {});
 
   const selSubject = subjects.find(s => s.name === subject);
   const chapters = selSubject?.chapters || [];
@@ -82,8 +86,8 @@ export default function RevisionPage() {
         <div className="flex-1 min-w-[140px]">
           <div className="font-medium text-[13px]" style={{ color: 'var(--text)' }}>{r.topic}</div>
           <div className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>
-            {r.subject}{r.chapter ? ` · ${r.chapter}` : ''} · Every {r.intervalDays}d
-            {r.repetitions > 0 && ` · Rep #${r.repetitions} · EF ${r.easinessFactor}`}
+            {r.subject}{r.chapter ? ` · ${r.chapter}` : ''} · {revCountBySubject[r.subject] || 0} revision{(revCountBySubject[r.subject] || 0) !== 1 ? 's' : ''}
+            {r.repetitions > 0 && ` · Rep #${r.repetitions}`}
             {r.lastConfidence && ` · Last: ${r.lastConfidence}`}
           </div>
           {r.notes && <div className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>{r.notes}</div>}
