@@ -135,15 +135,16 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
   return (
     <>
       {drawerOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 98, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 98, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)', willChange: 'opacity' }}
           onClick={onCloseDrawer} />
       )}
       <div style={{
         position: 'fixed', top: 0, bottom: 0, zIndex: 99, width: 270,
         display: 'flex', flexDirection: 'column', padding: '20px 16px', overflowY: 'auto',
-        transition: 'left 280ms cubic-bezier(0.4,0,0.2,1)',
+        transition: 'transform 280ms cubic-bezier(0.4,0,0.2,1)',
+        willChange: 'transform',
         boxShadow: '4px 0 32px rgba(0,0,0,0.4)',
-        left: drawerOpen ? 0 : -280,
+        transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
         background: 'rgba(20,22,26,0.5)',
         backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
