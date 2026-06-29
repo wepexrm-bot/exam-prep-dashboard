@@ -105,7 +105,7 @@ export function MobileBottomNav() {
             <span style={{
               width: 21, height: 21, display: 'inline-flex',
               filter: active ? 'drop-shadow(0 0 6px rgba(34,211,238,0.6))' : 'none',
-              transform: active ? 'translateY(-1px)' : 'none', transition: 'all 0.15s',
+              transform: active ? 'translateY(-1px)' : 'none', transition: 'transform 0.15s, filter 0.15s',
             }}>{icon}</span>
             <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</span>
           </button>
@@ -141,7 +141,7 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
       <div style={{
         position: 'fixed', top: 0, bottom: 0, zIndex: 99, width: 270,
         display: 'flex', flexDirection: 'column', padding: '20px 16px', overflowY: 'auto',
-        transition: 'all 280ms cubic-bezier(0.4,0,0.2,1)',
+        transition: 'left 280ms cubic-bezier(0.4,0,0.2,1)',
         boxShadow: '4px 0 32px rgba(0,0,0,0.4)',
         left: drawerOpen ? 0 : -280,
         background: 'rgba(20,22,26,0.5)',

@@ -342,7 +342,7 @@ export default function GoalsCalendarPage() {
                     display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
                     background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
                     opacity: g.done ? 0.55 : 1,
-                    animation: `goalRowIn 0.3s ease ${idx * 0.04}s both`,
+                    animation: `goalRowIn 0.2s ease both`,
                   }}>
                     <button
                       onClick={() => { if (selectedDate && selectedDate !== todayK) return showToast(selectedDate > todayK ? 'Cannot check off goals on a future date' : 'Cannot modify goals on a past date'); toggleGoal(g.id); }}
@@ -352,7 +352,7 @@ export default function GoalsCalendarPage() {
                         background: g.done ? '#4ADE80' : 'transparent',
                         border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
                         boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
-                        transition: 'all 0.15s',
+                        transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
                         opacity: selectedDate && selectedDate !== todayK ? 0.4 : 1,
                       }}
                     >{g.done && I.check}</button>
@@ -385,7 +385,7 @@ export default function GoalsCalendarPage() {
                   <div key={`deadline-${g.id}`} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
                     background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)',
-                    animation: `goalRowIn 0.3s ease ${(displayGoals.length + idx) * 0.04}s both`,
+                    animation: `goalRowIn 0.2s ease both`,
                     opacity: g.done ? 0.55 : 1,
                   }}>
                     <button
@@ -396,7 +396,7 @@ export default function GoalsCalendarPage() {
                         background: g.done ? '#4ADE80' : 'transparent',
                         border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
                         boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
-                        transition: 'all 0.15s',
+                        transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
                         opacity: selectedDate && selectedDate !== todayK ? 0.4 : 1,
                       }}
                     >{g.done && I.check}</button>

@@ -23,14 +23,14 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
     <button onClick={onClick}
       style={{
         width: 40, height: 22, borderRadius: 99, position: 'relative', cursor: 'pointer',
-        transition: 'all 0.25s', flexShrink: 0,
+        transition: 'background 0.25s, border-color 0.25s', flexShrink: 0,
         background: on ? 'rgba(34,211,238,0.35)' : 'rgba(255,255,255,0.08)',
         border: `1px solid ${on ? 'rgba(34,211,238,0.4)' : 'rgba(255,255,255,0.06)'}`,
       }}
     >
       <div style={{
         width: 16, height: 16, borderRadius: '50%', position: 'absolute', top: 2,
-        transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+        transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1), background 0.25s, box-shadow 0.25s',
         background: on ? '#22D3EE' : '#5B5F68',
         boxShadow: on ? '0 0 8px rgba(34,211,238,0.5)' : 'none',
         left: on ? 21 : 2,
@@ -279,7 +279,7 @@ export default function SettingsPage() {
                 border: `1px solid ${data.weeklyTarget === o.value ? 'rgba(34,211,238,0.4)' : 'rgba(255,255,255,0.08)'}`,
                 background: data.weeklyTarget === o.value ? 'rgba(34,211,238,0.15)' : 'rgba(255,255,255,0.04)',
                 color: data.weeklyTarget === o.value ? '#22D3EE' : 'var(--muted)',
-                transition: 'all 0.15s',
+                transition: 'background 0.15s, border-color 0.15s, color 0.15s',
               }}
               onClick={() => { setWeeklyTarget(o.value); showToast(`Weekly target set to ${o.value}h`); }}>
               {o.label}

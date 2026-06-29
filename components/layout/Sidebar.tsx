@@ -107,7 +107,7 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
                   color: active ? '#22D3EE' : '#9CA3AF',
                   background: active ? 'rgba(34,211,238,0.1)' : 'transparent',
                   boxShadow: active ? 'inset 0 0 0 1px rgba(34,211,238,0.25)' : 'none',
-                  transition: 'all 0.15s',
+                  transition: 'background 0.15s, color 0.15s, box-shadow 0.15s',
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}

@@ -123,7 +123,7 @@ export default function SubjectsPage() {
         return (
           <div key={si} className="panel" style={{
             padding: 0, overflow: 'hidden',
-            animation: `subjFadeIn 0.35s ease ${si * 0.06}s both`,
+            animation: `subjFadeIn 0.25s ease both`,
           }}>
             <div style={{
               height: 3, width: '100%',
@@ -161,7 +161,7 @@ export default function SubjectsPage() {
                       width: 22, height: 22, borderRadius: 6, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'none', border: 'none', color: '#555',
-                      cursor: 'pointer', transition: 'all 0.15s',
+                      cursor: 'pointer', transition: 'color 0.15s, background 0.15s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; }}
                     onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.background = 'none'; }}
@@ -219,8 +219,8 @@ export default function SubjectsPage() {
                       <div key={ci} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '8px 10px', borderRadius: 12,
-                        cursor: 'pointer', transition: 'all 0.15s',
-                        animation: `chRowIn 0.25s ease ${ci * 0.03}s both`,
+                        cursor: 'pointer', transition: 'background 0.15s',
+                        animation: `chRowIn 0.2s ease both`,
                       }}
                         className="group"
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface2)'; }}
@@ -231,7 +231,7 @@ export default function SubjectsPage() {
                           style={{
                             width: 20, height: 20, borderRadius: 7, flexShrink: 0,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', transition: 'all 0.15s',
+                            cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
                             background: ch.done ? '#4ADE80' : 'transparent',
                             border: ch.done ? 'none' : '1.5px solid var(--border)',
                             boxShadow: ch.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
@@ -259,7 +259,7 @@ export default function SubjectsPage() {
                               background: 'none', border: '1px solid var(--border)', color: 'var(--muted)',
                               cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
                               padding: '3px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4,
-                              transition: 'all 0.15s',
+                              transition: 'background 0.15s, color 0.15s',
                             }}
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface2)'; e.currentTarget.style.color = '#fff'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; e.currentTarget.style.color = 'var(--muted)'; }}
@@ -272,7 +272,7 @@ export default function SubjectsPage() {
                               background: 'none', border: '1px solid var(--border)', color: 'var(--muted)',
                               cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
                               padding: '3px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4,
-                              transition: 'all 0.15s',
+                              transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                             }}
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.1)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.3)'; e.currentTarget.style.color = '#F87171'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}

@@ -108,7 +108,7 @@ export default function SignupPage() {
             width: n === step ? 24 : 8, height: 8, borderRadius: 99,
             background: n <= step ? '#22D3EE' : 'rgba(255,255,255,0.1)',
             boxShadow: n <= step ? '0 0 8px rgba(34,211,238,0.6)' : 'none',
-            transition: 'all 0.3s',
+            transition: 'width 0.3s, background 0.3s, box-shadow 0.3s',
           }} />
         ))}
       </div>
@@ -181,7 +181,7 @@ export default function SignupPage() {
                     boxShadow: examType === opt.examId ? `0 0 16px ${opt.color}33` : 'none',
                     color: examType === opt.examId ? opt.color : '#94A3B8',
                     fontWeight: 700, fontSize: 13, textAlign: 'center',
-                    transition: 'all 0.2s',
+                    transition: 'background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s',
                   }}
                 >
                   <div style={{ fontSize: 24, marginBottom: 6 }}>{opt.emoji}</div>
