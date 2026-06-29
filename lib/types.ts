@@ -90,6 +90,22 @@ export interface NotificationPrefs {
   customAlerts: CustomAlert[];
 }
 
+export interface BadgeDefinition {
+  id: string;
+  category: 'study_hours' | 'daily_streak';
+  name: string;
+  description: string;
+  icon: string;
+  threshold: number;
+  permanent: boolean;
+}
+
+export interface BadgeState {
+  badgeId: string;
+  earnedAt: string; // ISO date — when first ever earned
+  demotedAt?: string; // ISO date — when last demoted (streak badges only)
+}
+
 export interface AppData {
   goals: Goal[];
   subjects: Subject[];
@@ -99,5 +115,6 @@ export interface AppData {
   studySessions: StudySession[];
   weeklyTarget: number;
   notificationPrefs?: NotificationPrefs;
+  badges?: BadgeState[];
   lastUpdated?: string;
 }

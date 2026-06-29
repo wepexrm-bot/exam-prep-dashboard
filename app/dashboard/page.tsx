@@ -6,6 +6,7 @@ import { Empty } from '@/components/ui';
 import { computeStreak, getDateLabel, today, dateKey } from '@/lib/utils';
 import { ScoreModal } from '@/components/modals/ScoreModal';
 import { EXAM_CONFIG } from '@/lib/constants';
+import { BadgeRow } from '@/components/badges/BadgeRow';
 
 const Icon = {
   all: <Grid3X3 size={14} />,
@@ -197,7 +198,8 @@ export default function DashboardPage() {
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Welcome back,</div>
           <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
-            {displayName} 
+            {displayName}
+            <BadgeRow badges={data.badges || []} size={24} />
             <span style={{
               background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)',
               color: '#22D3EE', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 99,

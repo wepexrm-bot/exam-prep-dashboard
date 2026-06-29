@@ -1,14 +1,17 @@
 'use client';
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { AppData, Confidence, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject, NotificationPrefs } from '@/lib/types';
+import { AppData, Confidence, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject, NotificationPrefs, BadgeState } from '@/lib/types';
 import { useExamConfig } from '@/lib/useExamConfig';
-import { sm2Next } from '@/lib/utils';
+import { sm2Next, computeStreak } from '@/lib/utils';
+import { totalStudyHours, eligibleStudyBadges, computeStreakBadgeState } from '@/lib/badges';
 
 interface AppContextType {
   data: AppData;
   loading: boolean;
   examType: string;
   username: string;
+  newBadges: BadgeState[];
+  clearNewBadges: () => void;
   loadData: () => Promise<void>;
   syncToServer: (patch?: Partial<AppData>) => Promise<void>;
   toggleGoal: (id: number) => Promise<void>;
@@ -114,14 +117,29 @@ export function AppProvider({
       breakReminder: { enabled: false, intervalMin: 120 },
       customAlerts: [],
     },
+    badges: [],
   };
 
   const CACHE_KEY = 'gate_data_cache';
   const [data, setData] = useState<AppData>(defaultData);
   const [loading, setLoading] = useState(true);
+  const [newBadges, setNewBadges] = useState<BadgeState[]>([]);
   const dataRef = useRef(data);
   dataRef.current = data;
   const cacheLoadedRef = useRef(false);
+
+  function detectBadges(prev: AppData): { badges: BadgeState[]; fresh: BadgeState[] } {
+    const hours = totalStudyHours(prev);
+    const existing = prev.badges || [];
+    const existingIds = new Set(existing.map(b => b.badgeId));
+    const studyNew = eligibleStudyBadges(hours, existing);
+    const streak = computeStreak(prev);
+    const { streakBadges } = computeStreakBadgeState(existing, streak);
+    const otherBadges = existing.filter(b => !studyNew.some(nb => nb.badgeId === b.badgeId) && !streakBadges.some(sb => sb.badgeId === b.badgeId));
+    const finalBadges = [...otherBadges, ...studyNew, ...streakBadges];
+    const fresh = finalBadges.filter(b => !existingIds.has(b.badgeId));
+    return { badges: finalBadges, fresh };
+  }
 
   const setDataAndPersist = useCallback((updater: AppData | ((prev: AppData) => AppData)) => {
     if (typeof updater === 'function') {
@@ -159,7 +177,7 @@ export function AppProvider({
         carryoverGoals.push({ ...g, id: nextId++, date: todayK, done: false });
       });
       const goals = [...rawGoals, ...carryoverGoals];
-      const fresh = {
+      const base = {
         goals,
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
         dailyScores: d.dailyScores || [],
@@ -168,9 +186,13 @@ export function AppProvider({
         studySessions: d.studySessions || [],
         weeklyTarget: d.weeklyTarget || 12,
         notificationPrefs: { ...defaultData.notificationPrefs, ...d.notificationPrefs, customAlerts: d.notificationPrefs?.customAlerts || [] },
+        badges: d.badges || [],
         lastUpdated: d.lastUpdated,
       };
+      const { badges, fresh: newB } = detectBadges(base);
+      const fresh = { ...base, badges };
       setData(fresh);
+      if (newB.length > 0) setNewBadges(prev => [...prev, ...newB]);
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch { /* ignore */ }
     } catch (e) {
       showErrorToast('Failed to load data from server');
@@ -240,8 +262,10 @@ export function AppProvider({
         ? prev.dailyScores.map((s, i) => i === idx ? score : s)
         : [...prev.dailyScores, score];
       const next = { ...prev, dailyScores: scores };
+      const { badges, fresh } = detectBadges(next);
+      if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
       apiCall('POST', '/api/scores', score).catch(() => showErrorToast('Failed to save score'));
-      return next;
+      return { ...next, badges };
     });
   }, []);
 
@@ -259,8 +283,11 @@ export function AppProvider({
       const pyqData: PYQChapter[] = existing
         ? prev.pyqData.map(p => p.key === key ? { ...p, sessions: [...p.sessions, session] } : p)
         : [...prev.pyqData, { key, total, sessions: [session] }];
+      const next = { ...prev, pyqData };
+      const { badges, fresh } = detectBadges(next);
+      if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
       apiCall('POST', '/api/data', { pyqData }).catch(() => showErrorToast('Failed to save'));
-      return { ...prev, pyqData };
+      return { ...next, badges };
     });
   }, []);
 
@@ -378,8 +405,10 @@ export function AppProvider({
   const addStudySession = useCallback(async (session: StudySession) => {
     setDataAndPersist(prev => {
       const next = { ...prev, studySessions: [...prev.studySessions, session] };
+      const { badges, fresh } = detectBadges(next);
+      if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
       apiCall('POST', '/api/sessions', session).catch(() => showErrorToast('Failed to save study session'));
-      return next;
+      return { ...next, badges };
     });
   }, []);
 
@@ -397,9 +426,11 @@ export function AppProvider({
     });
   }, []);
 
+  const clearNewBadges = useCallback(() => setNewBadges([]), []);
+
   return (
     <AppContext.Provider value={{
-      data, loading, examType, username, loadData, syncToServer,
+      data, loading, examType, username, newBadges, clearNewBadges, loadData, syncToServer,
       toggleGoal, addGoal, updateGoal, deleteGoal, clearDoneGoals, clearAllGoals,
       addScore, deleteScore,
       addPYQSession, deletePYQSession,

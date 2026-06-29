@@ -2,10 +2,11 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, Flame, Sun, LogOut, GraduationCap, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, Flame, Sun, LogOut, GraduationCap, BarChart3, Award } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { EXAM_CONFIG } from '@/lib/constants';
 import { ExamType } from '@/models/User';
+import { BadgeRow } from '@/components/badges/BadgeRow';
 
 const I = {
   dashboard: <LayoutDashboard size={16} />,
@@ -34,6 +35,7 @@ const NAV = [
     { page: 'pyq', icon: I.pyq, label: 'PYQ Tracker' },
     { page: 'revision', icon: I.revision, label: 'Revision Log' },
     { page: 'studytimer', icon: I.timer, label: 'Study Timer' },
+    { page: 'badges', icon: <Award size={16} />, label: 'Badges' },
   ]},
   { section: 'Performance', items: [
     { page: 'scores', icon: I.scores, label: 'Score Log' },
@@ -80,11 +82,12 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
       </div>
       <p style={{ fontSize: 11, color: '#7C8089', margin: '4px 0 4px 44px' }}>{cfg.tagline}</p>
       {username && (
-        <div style={{ marginLeft: 44, marginBottom: 18 }}>
+        <div style={{ marginLeft: 44, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             fontSize: 11, padding: '4px 10px', borderRadius: 99, fontWeight: 600,
             background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)', color: '#22D3EE',
           }}>{username}</span>
+          <BadgeRow badges={data.badges || []} size={20} />
         </div>
       )}
 

@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileTopBar, MobileBottomNav, MobileDrawer } from '@/components/layout/MobileNav';
 import { ToastContainer, showToast } from '@/components/ui';
 import { NotificationManager } from '@/components/NotificationManager';
+import { BadgeNotification } from '@/components/badges/BadgeNotification';
 import { ExamType } from '@/models/User';
 
 function Shell({ username, examType, children }: { username: string; examType: ExamType; children: React.ReactNode }) {
@@ -45,6 +46,7 @@ function Shell({ username, examType, children }: { username: string; examType: E
 
       <ToastContainer />
       <NotificationManager />
+      <BadgeNotification />
     </div>
   );
 }

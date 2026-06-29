@@ -1,11 +1,12 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap, BarChart3, Award } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { EXAM_CONFIG } from '@/lib/constants';
 import { ExamType } from '@/models/User';
+import { BadgeRow } from '@/components/badges/BadgeRow';
 
 const I = {
   dashboard: <LayoutDashboard size={16} />,
@@ -44,6 +45,7 @@ const ALL_NAV = [
     { page: 'pyq', icon: I.pyq, label: 'PYQ Tracker' },
     { page: 'revision', icon: I.revision, label: 'Revision Log' },
     { page: 'studytimer', icon: I.timer, label: 'Study Timer' },
+    { page: 'badges', icon: <Award size={16} />, label: 'Badges' },
   ]},
   { section: 'Performance', items: [
     { page: 'scores', icon: I.scores, label: 'Score Log' },
@@ -163,9 +165,13 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
 
         {username && (
           <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
             fontSize: 11, fontWeight: 600, padding: '6px 12px', borderRadius: 10, marginBottom: 6,
             background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)', color: '#22D3EE',
-          }}>{username}</div>
+          }}>
+            <span>{username}</span>
+            <BadgeRow badges={data.badges || []} size={18} />
+          </div>
         )}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,

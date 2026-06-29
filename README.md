@@ -33,6 +33,7 @@ A full-stack multi-user exam preparation dashboard for GATE, NET, GOVT exams, bu
 - **Activity Heatmap** — GitHub-style contribution graph on dashboard
 - **Per-subject revision count** — shown inline on every revision entry
 - **Per-goal calendar dots** — one dot per goal, individual completion status
+- **Badge System** — earnable badges for study hours (5 tiers, no demotion) and daily streak (5 tiers, demotion on break, permanent at max tier). Toast notification on earn. Dedicated badges page with rules, dedicated BadgeRow component in sidebar/dashboard
 - **Notifications** — Capacitor local notifications for revision reminders, goals check-in, streak reminders, weekly target, breaks + custom alerts
 - **Data & Backup** — export/restore full JSON, force-sync, stats summary
 
@@ -121,9 +122,11 @@ gate-prep/
 │   ├── studytimer/             # Study timer with chart
 │   ├── scores/                 # Score log with trend chart
 │   ├── insights/               # Cross-sectional analytics
+│   ├── badges/                 # Badge rules & collection display
 │   ├── storage/                # Data & Backup (export/restore)
 │   └── settings/               # Account, notifications, danger zone
 ├── components/
+│   ├── badges/                 # BadgeRow, BadgeNotification
 │   ├── layout/                 # Sidebar, MobileNav, MobileDrawer
 │   ├── modals/                 # ScoreModal
 │   └── ui/                     # Card, MetricCard, Modal, Toast, Empty, etc.
@@ -132,6 +135,7 @@ gate-prep/
 ├── lib/
 │   ├── db.ts                   # MongoDB connection + index creation
 │   ├── auth.ts                 # JWT sign/verify utilities
+│   ├── badges.ts               # Badge definitions, detection, demotion logic
 │   ├── utils.ts                # dateKey, sm2Next, computeStreak, formatSeconds
 │   ├── rateLimit.ts            # In-memory rate limiter
 │   ├── types.ts                # TypeScript interfaces
