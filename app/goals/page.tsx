@@ -78,14 +78,14 @@ export default function GoalsCalendarPage() {
   }
 
   const monthActivity = useMemo(() => {
-    const map: Record<number, { total: number; done: number; hasDeadline: boolean }> = {};
+    const map: Record<number, { total: number; done: number; doneFlags: boolean[]; hasDeadline: boolean }> = {};
     calendarCells.forEach(day => {
       if (!day) return;
       const dKey = toKey(new Date(year, month, day));
       const dayGoals = goalsForDate(dKey);
       const hasDeadline = goals.some(g => g.endDate === dKey);
       if (dayGoals.length > 0 || hasDeadline) {
-        map[day] = { total: dayGoals.length, done: dayGoals.filter(g => g.done).length, hasDeadline };
+        map[day] = { total: dayGoals.length, done: dayGoals.filter(g => g.done).length, doneFlags: dayGoals.map(g => g.done), hasDeadline };
       }
     });
     return map;
@@ -222,9 +222,12 @@ export default function GoalsCalendarPage() {
               >
                 <span style={{ fontSize: 12 }}>{day}</span>
                 {activity && (
-                  <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    {activity.total > 0 && (
-                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: isSelected ? '#0F172A' : allDone ? '#4ADE80' : '#FB923C' }} />
+                  <div style={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {activity.doneFlags.slice(0, 5).map((done, di) => (
+                      <span key={di} style={{ width: 4, height: 4, borderRadius: '50%', background: isSelected ? '#0F172A' : done ? '#4ADE80' : '#FB923C' }} />
+                    ))}
+                    {activity.total > 5 && (
+                      <span style={{ fontSize: 7, fontWeight: 700, color: isSelected ? '#0F172A' : 'var(--muted)' }}>+{activity.total - 5}</span>
                     )}
                     {activity.hasDeadline && (
                       <span style={{ width: 4, height: 4, borderRadius: '50%', background: isSelected ? '#0F172A' : '#F87171' }} />
