@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { STUDY_BADGES, STREAK_BADGES, badgeById, totalStudyHours, nextStreakBadge } from '@/lib/badges';
 import { computeStreak } from '@/lib/utils';
 import { Award, Clock, Flame, Star } from 'lucide-react';
+import { GlowingBadge } from '@/components/badges/GlowingBadge';
 
 export default function BadgesPage() {
   const { data } = useApp();
@@ -19,20 +20,17 @@ export default function BadgesPage() {
         display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
         background: earned ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.03)',
         borderRadius: 14, border: earned ? '1px solid rgba(34,211,238,0.25)' : '1px solid rgba(255,255,255,0.06)',
-        opacity: earned ? 1 : 0.35,
+        opacity: earned ? 1 : 0.55,
         transition: 'opacity 0.2s',
       }}>
-        <img src={def.icon} alt={def.name} style={{
-          width: 48, height: 48, borderRadius: 12,
-          filter: earned ? 'none' : 'grayscale(1)',
-          transition: 'filter 0.2s',
-        }} />
+        <GlowingBadge badgeId={def.id} src={def.icon} alt={def.name}
+          size={48} earned={earned} rounded={11} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: earned ? '#fff' : '#6B7280', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: earned ? '#fff' : '#94A3B8', display: 'flex', alignItems: 'center', gap: 8 }}>
             {def.name}
             {def.permanent && <Star size={12} style={{ color: '#FBBF24' }} />}
           </div>
-          <div style={{ fontSize: 11, color: earned ? '#94A3B8' : '#4B5563', marginTop: 2 }}>{def.description}</div>
+          <div style={{ fontSize: 11, color: earned ? '#CBD5E1' : '#6B7280', marginTop: 2 }}>{def.description}</div>
           {earned && badgeState && (
             <div style={{ fontSize: 10, color: '#22D3EE', marginTop: 4 }}>
               {def.category === 'daily_streak' && badgeState.demotedAt
@@ -58,17 +56,17 @@ export default function BadgesPage() {
         <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Award size={22} style={{ color: '#22D3EE' }} /> Badges
         </h1>
-        <p style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>Earn badges as you progress through your preparation journey.</p>
+        <p style={{ fontSize: 12, color: '#CBD5E1', marginTop: 4 }}>Earn badges as you progress through your preparation journey.</p>
       </div>
 
       {/* Rules */}
       <div className="panel" style={{ padding: 16 }}>
         <h2 style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Reward System Rules</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#CBD5E1', lineHeight: 1.6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, color: '#E2E8F0', lineHeight: 1.6 }}>
           <div><strong style={{ color: '#22D3EE' }}>Study Time Badges</strong> — Based on total study hours accumulated. Once earned, badges are retained permanently (no demotion). Quantum Catalyst is a permanent badge.</div>
           <div><strong style={{ color: '#FB923C' }}>Daily Streak Badges</strong> — Based on consecutive days with activity (study, PYQ, or scores). If your streak breaks, you get demoted one tier and your internal progress starts from the demoted tier's threshold. Cosmic Catalyst, once earned, is permanent.</div>
           <div style={{ background: 'rgba(34,211,238,0.08)', borderRadius: 10, padding: '10px 12px', marginTop: 4, border: '1px solid rgba(34,211,238,0.15)' }}>
-            <strong style={{ color: '#22D3EE' }}>Tip:</strong> <span style={{ color: '#CBD5E1' }}>Log study sessions, PYQ attempts, or daily scores each day to maintain your streak and earn higher badges!</span>
+            <strong style={{ color: '#22D3EE' }}>Tip:</strong> <span style={{ color: '#E2E8F0' }}>Log study sessions, PYQ attempts, or daily scores each day to maintain your streak and earn higher badges!</span>
           </div>
         </div>
       </div>

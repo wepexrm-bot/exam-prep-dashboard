@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { BadgeState } from '@/lib/types';
 import { STUDY_BADGES, STREAK_BADGES } from '@/lib/badges';
+import { GlowingBadge } from './GlowingBadge';
 
 export function BadgeRow({ badges, size = 22, max = 3 }: { badges: BadgeState[]; size?: number; max?: number }) {
   const router = useRouter();
@@ -21,8 +22,8 @@ export function BadgeRow({ badges, size = 22, max = 3 }: { badges: BadgeState[];
       onClick={() => router.push('/badges')}
       title="View badges">
       {display.map((def, i) => (
-        <img key={i} src={def!.icon} alt={def!.name}
-          style={{ width: size, height: size, borderRadius: 6 }} />
+        <GlowingBadge key={i} badgeId={def!.id} src={def!.icon} alt={def!.name}
+          size={size} earned={earnedIds.has(def!.id)} rounded={5} />
       ))}
     </div>
   );
