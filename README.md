@@ -36,6 +36,13 @@ A full-stack multi-user exam preparation dashboard for GATE, NET, GOVT exams, bu
 - **Notifications** — Capacitor local notifications for revision reminders, goals check-in, streak reminders, weekly target, breaks + custom alerts
 - **Data & Backup** — export/restore full JSON, force-sync, stats summary
 
+### Backup & Restore
+- **Full JSON export** — one-click download of complete user data from `/api/export`
+- **JSON import restore** — upload a backup file via the storage page; `syncToServer()` posts it to `/api/data`, fully overwriting current data
+- **Force sync** — re-fetches data from server and refreshes local cache
+- **Storage stats** — shows live counts (scores, sessions, PYQ entries, revisions) and data size
+- Works across devices — export on one device, import on another
+
 ### Resilience & Performance
 - **localStorage persistence** — every mutation writes to cache; data survives reloads even during server outages
 - **Optimistic state** — UI updates instantly, syncs async to server; error toast on failure
