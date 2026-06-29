@@ -64,7 +64,7 @@ export function NotificationManager() {
     customAlerts: data.notificationPrefs?.customAlerts || [],
   };
   const cachedRef = useRef('');
-  const lastFiredRef = useRef(new Map<string, number>());
+  const lastFiredRef = useRef(new Map<string, boolean>());
 
   // ── Capacitor native scheduling ──
   useEffect(() => {
@@ -288,7 +288,7 @@ export function NotificationManager() {
 
     if (Notification.permission === 'default') Notification.requestPermission();
 
-    const interval = setInterval(() => {
+    function checkAndFire() {
       if (Notification.permission !== 'granted') return;
 
       const now = new Date();
@@ -298,10 +298,11 @@ export function NotificationManager() {
       const today = todayLocal();
 
       function shouldFire(key: string, targetH: number, targetM: number): boolean {
-        if (hh !== targetH || mm !== targetM) return false;
-        const last = lastFiredRef.current.get(key) ?? -1;
-        if (last === currentMinute) return false;
-        lastFiredRef.current.set(key, currentMinute);
+        const todayKey = `${today}-${key}`;
+        if (lastFiredRef.current.has(todayKey)) return false;
+        const targetMin = targetH * 60 + targetM;
+        if (currentMinute < targetMin) return false;
+        lastFiredRef.current.set(todayKey, true);
         return true;
       }
 
@@ -384,9 +385,16 @@ export function NotificationManager() {
           }
         });
       }
-    }, 30_000);
+    }
 
-    return () => clearInterval(interval);
+    const interval = setInterval(checkAndFire, 30_000);
+
+    function onVisible() {
+      if (document.visibilityState === 'visible') checkAndFire();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
   }, [prefs, data.revisions, data.dailyScores, data.studySessions, data.pyqData, data.weeklyTarget, data.goals]);
 
   return null;
