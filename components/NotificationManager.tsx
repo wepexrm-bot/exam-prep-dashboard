@@ -15,6 +15,10 @@ declare global {
           schedule: (opts: { notifications: Record<string, unknown>[] }) => Promise<void>;
           getPending: () => Promise<{ notifications: Record<string, unknown>[] }>;
         };
+        App?: {
+          addListener: (event: 'appStateChange', handler: (state: { isActive: boolean }) => void) => Promise<{ remove: () => void }>;
+          removeAllListeners: () => Promise<void>;
+        };
       };
     };
   }
@@ -280,10 +284,9 @@ export function NotificationManager() {
     return () => { cancelled = true; };
   }, [data.revisions, data.dailyScores, data.studySessions, data.pyqData, data.weeklyTarget, data.goals, prefs]);
 
-  // ── Web notification polling (fallback when Capacitor is unavailable) ──
+  // ── Web notification polling (always runs as backup) ──
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.Capacitor) return;
     if (!('Notification' in window)) return;
 
     if (Notification.permission === 'default') Notification.requestPermission();
@@ -394,7 +397,19 @@ export function NotificationManager() {
     }
     document.addEventListener('visibilitychange', onVisible);
 
-    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
+    let removeAppListener: (() => void) | undefined;
+    const app = window.Capacitor?.Plugins?.App;
+    if (app) {
+      app.addListener('appStateChange', (state) => {
+        if (state.isActive) checkAndFire();
+      }).then(h => { removeAppListener = h.remove; });
+    }
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      removeAppListener?.();
+    };
   }, [prefs, data.revisions, data.dailyScores, data.studySessions, data.pyqData, data.weeklyTarget, data.goals]);
 
   return null;
