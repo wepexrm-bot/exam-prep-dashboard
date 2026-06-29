@@ -54,13 +54,14 @@ type Notif = Record<string, unknown>;
 
 export function NotificationManager() {
   const { data } = useApp();
-  const prefs: NotificationPrefs = data.notificationPrefs || {
+  const prefs: NotificationPrefs = {
     revisionReminder: { enabled: true, hour: 9, minute: 0 },
     goalsCheckIn: { enabled: false, hour: 17, minute: 0 },
     streakReminder: { enabled: true, hour: 15, minute: 0 },
     weeklyTarget: { enabled: false, hour: 18, minute: 0, weekday: 0 },
     breakReminder: { enabled: false, intervalMin: 120 },
-    customAlerts: [],
+    ...data.notificationPrefs,
+    customAlerts: data.notificationPrefs?.customAlerts || [],
   };
   const cachedRef = useRef('');
   const lastFiredRef = useRef(new Map<string, number>());

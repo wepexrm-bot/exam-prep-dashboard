@@ -167,7 +167,7 @@ export function AppProvider({
         revisions: (d.revisions || []).map((r: any) => ({ easinessFactor: 2.5, repetitions: 0, ...r })),
         studySessions: d.studySessions || [],
         weeklyTarget: d.weeklyTarget || 12,
-        notificationPrefs: d.notificationPrefs || defaultData.notificationPrefs,
+        notificationPrefs: { ...defaultData.notificationPrefs, ...d.notificationPrefs, customAlerts: d.notificationPrefs?.customAlerts || [] },
         lastUpdated: d.lastUpdated,
       };
       setData(fresh);
