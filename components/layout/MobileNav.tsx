@@ -1,7 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, Flame, Sun, LogOut, Menu, X, GraduationCap, BarChart3, Award } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, LogOut, Menu, X, GraduationCap, BarChart3, Award } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { EXAM_CONFIG } from '@/lib/constants';
@@ -19,9 +19,7 @@ const I = {
   storage: <Database size={16} />,
   settings: <Settings size={16} />,
   insights: <BarChart3 size={16} />,
-  flame: <Flame size={16} style={{ fill: '#0F172A', color: '#FB923C' }} />,
   sync: <RefreshCw size={14} />,
-  moon: <Sun size={14} />,
   logout: <LogOut size={14} />,
   menu: <Menu size={22} />,
   close: <X size={18} />,
@@ -210,7 +208,6 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
           display: 'flex', flexDirection: 'column', gap: 7,
         }}>
           <button onClick={() => { onCloseDrawer(); onSync?.(); }} style={navBtnStyle}>{I.sync} Sync data</button>
-          <button onClick={() => { document.documentElement.classList.toggle('dark'); onCloseDrawer(); }} style={navBtnStyle}>{I.moon} Toggle dark</button>
           <button onClick={handleLogout} style={{ ...navBtnStyle, color: '#F87171' }}>{I.logout} Sign out</button>
         </div>
       </div>

@@ -2,7 +2,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, Flame, Sun, LogOut, GraduationCap, BarChart3, Award } from 'lucide-react';
+import { LayoutDashboard, Target, BookOpen, FolderOpen, RefreshCw, Timer, TrendingUp, Database, Settings, LogOut, GraduationCap, BarChart3, Award } from 'lucide-react';
 import { computeStreak } from '@/lib/utils';
 import { EXAM_CONFIG } from '@/lib/constants';
 import { ExamType } from '@/models/User';
@@ -19,9 +19,7 @@ const I = {
   storage: <Database size={16} />,
   settings: <Settings size={16} />,
   insights: <BarChart3 size={16} />,
-  flame: <Flame size={16} style={{ fill: '#0F172A', color: '#FB923C' }} />,
   sync: <RefreshCw size={14} />,
-  moon: <Sun size={14} />,
   logout: <LogOut size={14} />,
 };
 
@@ -137,7 +135,6 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
           {streak}-day streak
         </div>
         <button onClick={onSync} style={navBtnStyle}>{I.sync} Sync data</button>
-        <button onClick={() => document.documentElement.classList.toggle('dark')} style={navBtnStyle}>{I.moon} Toggle dark</button>
         <button onClick={handleLogout} style={{ ...navBtnStyle, color: '#F87171' }}>{I.logout} Sign out</button>
       </div>
     </aside>
