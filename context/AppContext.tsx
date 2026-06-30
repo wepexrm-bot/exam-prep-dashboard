@@ -192,8 +192,14 @@ export function AppProvider({
       const { badges, fresh: newB } = detectBadges(base);
       const fresh = { ...base, badges };
       setData(fresh);
-      if (newB.length > 0) setNewBadges(prev => [...prev, ...newB]);
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch { /* ignore */ }
+      if (newB.length > 0) {
+        apiCall('POST', '/api/data', { badges }).catch(() => {});
+        if (typeof window !== 'undefined' && sessionStorage.getItem('freshLogin')) {
+          setNewBadges(prev => [...prev, ...newB]);
+          sessionStorage.removeItem('freshLogin');
+        }
+      }
     } catch (e) {
       showErrorToast('Failed to load data from server');
     } finally { setLoading(false); }
