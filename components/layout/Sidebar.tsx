@@ -134,7 +134,7 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
           background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(59,130,246,0.1))',
           border: '1px solid rgba(34,211,238,0.25)', color: '#22D3EE',
         }}>
-          {I.flame} {streak}-day streak
+          {streak}-day streak
         </div>
         <button onClick={onSync} style={navBtnStyle}>{I.sync} Sync data</button>
         <button onClick={() => document.documentElement.classList.toggle('dark')} style={navBtnStyle}>{I.moon} Toggle dark</button>

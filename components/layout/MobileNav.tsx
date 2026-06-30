@@ -178,7 +178,7 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
           fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 10, marginBottom: 14,
           background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(59,130,246,0.1))',
           border: '1px solid rgba(34,211,238,0.25)', color: '#22D3EE', textAlign: 'center',
-        }}>{I.flame} {streak}-day streak</div>
+        }}>{streak}-day streak</div>
 
         {ALL_NAV.map(group => (
           <div key={group.section}>

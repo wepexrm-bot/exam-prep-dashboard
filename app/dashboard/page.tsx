@@ -228,10 +228,7 @@ export default function DashboardPage() {
 
         <div className="stat-card hero">
           <div style={{ fontSize: 9, color: 'rgba(15,23,42,0.65)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Streak</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 19, fontWeight: 800, color: '#0F172A' }}>{streak} days</div>
-            {Icon.flame}
-          </div>
+          <div style={{ fontSize: 19, fontWeight: 800, color: '#0F172A' }}>{streak} days</div>
           <div style={{ fontSize: 9, color: 'rgba(15,23,42,0.7)' }}>{streak > 0 ? 'Days running' : 'Be active to start'}</div>
         </div>
 
