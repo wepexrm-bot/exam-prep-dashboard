@@ -170,6 +170,7 @@ export default function SettingsPage() {
 
   const removeCustomAlert = useCallback((id: number) => {
     updatePref({ customAlerts: prefs.customAlerts.filter(a => a.id !== id) });
+    showToast('Custom alert removed');
   }, [prefs, updatePref]);
 
   const toggleCustomAlert = useCallback((id: number) => {

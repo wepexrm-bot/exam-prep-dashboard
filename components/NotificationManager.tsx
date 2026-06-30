@@ -133,9 +133,11 @@ export function NotificationManager() {
           await LocalNotifications.requestPermissions();
         }
 
-        await LocalNotifications.cancel({
-          notifications: Object.values(NOTIF_IDS).map(id => ({ id })),
-        });
+        const pending = await LocalNotifications.getPending();
+        const pendingIds = (pending.notifications || []).map(n => ({ id: Number(n.id) }));
+        if (pendingIds.length > 0) {
+          await LocalNotifications.cancel({ notifications: pendingIds });
+        }
 
         const notifications: Notif[] = [];
         const today = todayLocal();
