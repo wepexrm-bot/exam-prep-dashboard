@@ -305,6 +305,9 @@ export function NotificationManager() {
         if (lastFiredRef.current.has(todayKey)) return false;
         const targetMin = targetH * 60 + targetM;
         if (currentMinute < targetMin) return false;
+        // Only fire within 3 minutes of target time — beyond that, Capacitor native
+        // already handled the notification at the correct time
+        if (currentMinute - targetMin > 3) return false;
         lastFiredRef.current.set(todayKey, true);
         return true;
       }
