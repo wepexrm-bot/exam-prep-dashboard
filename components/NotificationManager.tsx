@@ -56,6 +56,47 @@ function parseLocalDate(s: string) {
 
 type Notif = Record<string, unknown>;
 
+// ── Shared dedup across tabs via localStorage ──
+const FIRED_KEY = 'notif_fired';
+
+function getFiredMap(): Record<string, string[]> {
+  try {
+    return JSON.parse(localStorage.getItem(FIRED_KEY) || '{}');
+  } catch { return {}; }
+}
+
+function persistFiredMap(map: Record<string, string[]>) {
+  try { localStorage.setItem(FIRED_KEY, JSON.stringify(map)); } catch { /* ignore */ }
+}
+
+function hasFired(key: string): boolean {
+  const today = todayLocal();
+  const map = getFiredMap();
+  return (map[today] || []).includes(key);
+}
+
+function markFired(key: string) {
+  const today = todayLocal();
+  const map = getFiredMap();
+  // Clean up old entries
+  for (const date of Object.keys(map)) {
+    if (date !== today) delete map[date];
+  }
+  map[today] = [...(map[today] || []), key];
+  persistFiredMap(map);
+}
+
+// ── Web notification helper with navigation ──
+function fireWebNotif(title: string, body: string, path?: string) {
+  const n = new Notification(title, { body });
+  if (path) {
+    n.onclick = () => {
+      window.focus();
+      window.location.href = path;
+    };
+  }
+}
+
 export function NotificationManager() {
   const { data } = useApp();
   const prefs: NotificationPrefs = {
@@ -68,7 +109,6 @@ export function NotificationManager() {
     customAlerts: data.notificationPrefs?.customAlerts || [],
   };
   const cachedRef = useRef('');
-  const lastFiredRef = useRef(new Map<string, boolean>());
 
   // ── Capacitor native scheduling ──
   useEffect(() => {
@@ -250,20 +290,38 @@ export function NotificationManager() {
         if (prefs.customAlerts?.length > 0) {
           prefs.customAlerts.forEach((alert, idx) => {
             if (!alert.enabled) return;
-            const id = NOTIF_IDS.CUSTOM_START + idx;
-            const on: Record<string, unknown> = {
-              hour: clamp(alert.hour, 0, 23),
-              minute: clamp(alert.minute, 0, 59),
-            };
             if (alert.daysOfWeek.length > 0) {
-              on.weekday = alert.daysOfWeek[0];
+              // One notification per selected day of week
+              alert.daysOfWeek.forEach((dow, dayIdx) => {
+                notifications.push({
+                  id: NOTIF_IDS.CUSTOM_START + idx * 10 + dayIdx,
+                  title: alert.title || 'Reminder',
+                  body: alert.body || '',
+                  schedule: {
+                    on: {
+                      weekday: clamp(dow, 0, 6),
+                      hour: clamp(alert.hour, 0, 23),
+                      minute: clamp(alert.minute, 0, 59),
+                    },
+                    repeats: true,
+                  },
+                });
+              });
+            } else {
+              // No day filter: fire daily
+              notifications.push({
+                id: NOTIF_IDS.CUSTOM_START + idx * 10,
+                title: alert.title || 'Reminder',
+                body: alert.body || '',
+                schedule: {
+                  on: {
+                    hour: clamp(alert.hour, 0, 23),
+                    minute: clamp(alert.minute, 0, 59),
+                  },
+                  repeats: true,
+                },
+              });
             }
-            notifications.push({
-              id,
-              title: alert.title || 'Reminder',
-              body: alert.body || '',
-              schedule: { on, repeats: true },
-            });
           });
         }
 
@@ -301,14 +359,12 @@ export function NotificationManager() {
       const today = todayLocal();
 
       function shouldFire(key: string, targetH: number, targetM: number): boolean {
-        const todayKey = `${today}-${key}`;
-        if (lastFiredRef.current.has(todayKey)) return false;
+        if (hasFired(key)) return false;
         const targetMin = targetH * 60 + targetM;
         if (currentMinute < targetMin) return false;
-        // Only fire within 3 minutes of target time — beyond that, Capacitor native
-        // already handled the notification at the correct time
-        if (currentMinute - targetMin > 3) return false;
-        lastFiredRef.current.set(todayKey, true);
+        // 1-min grace window — Capacitor native handles exact-time delivery
+        if (currentMinute - targetMin > 1) return false;
+        markFired(key);
         return true;
       }
 
@@ -321,9 +377,7 @@ export function NotificationManager() {
           return next <= new Date();
         }).length;
         if (revDue > 0 && shouldFire('rev', p.revisionReminder.hour, p.revisionReminder.minute)) {
-          new Notification('Revision due', {
-            body: `${revDue} topic${revDue > 1 ? 's' : ''} need review today.`,
-          });
+          fireWebNotif('Revision due', `${revDue} topic${revDue > 1 ? 's' : ''} need review today.`, '/revision');
         }
       }
 
@@ -344,7 +398,7 @@ export function NotificationManager() {
           } else {
             body = `${doneCount} of ${totalCount} goal${totalCount > 1 ? 's' : ''} done — keep going!`;
           }
-          new Notification('Daily goals check-in', { body });
+          fireWebNotif('Daily goals check-in', body, '/goals');
         }
       }
 
@@ -359,9 +413,7 @@ export function NotificationManager() {
           return g.done && today >= start && today <= end;
         });
         if (!(hasScoreToday || hasStudyToday || hasPYQToday || hasGoalDoneToday)) {
-          new Notification("Keep your streak alive!", {
-            body: "You haven't logged any activity today.",
-          });
+          fireWebNotif("Keep your streak alive!", "You haven't logged any activity today.", '/goals');
         }
       }
 
@@ -374,11 +426,9 @@ export function NotificationManager() {
           .reduce((a, s) => a + (s.durationSec || 0), 0);
         const targetSecs = (data.weeklyTarget || 12) * 3600;
         const weekPct = targetSecs > 0 ? Math.round((weekSecs / targetSecs) * 100) : 0;
-        new Notification('Weekly target check-in', {
-          body: weekPct >= 100
-            ? `You hit ${weekPct}% of your weekly target!`
-            : `You're at ${weekPct}% of your weekly study target.`,
-        });
+        fireWebNotif('Weekly target check-in', weekPct >= 100
+          ? `You hit ${weekPct}% of your weekly target!`
+          : `You're at ${weekPct}% of your weekly study target.`, '/studytimer');
       }
 
       if (p.customAlerts?.length > 0) {
@@ -387,7 +437,7 @@ export function NotificationManager() {
           if (alert.daysOfWeek.length > 0 && !alert.daysOfWeek.includes(now.getDay())) return;
           const key = `custom-${idx}`;
           if (shouldFire(key, alert.hour, alert.minute)) {
-            new Notification(alert.title || 'Reminder', { body: alert.body || '' });
+            fireWebNotif(alert.title || 'Reminder', alert.body || '');
           }
         });
       }
