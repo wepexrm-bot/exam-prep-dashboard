@@ -362,8 +362,6 @@ export function NotificationManager() {
         if (hasFired(key)) return false;
         const targetMin = targetH * 60 + targetM;
         if (currentMinute < targetMin) return false;
-        // 1-min grace window — Capacitor native handles exact-time delivery
-        if (currentMinute - targetMin > 1) return false;
         markFired(key);
         return true;
       }
