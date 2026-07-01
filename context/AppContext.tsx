@@ -189,12 +189,10 @@ export function AppProvider({
       const fresh = { ...base, badges };
       setData(fresh);
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch { /* ignore */ }
-      if (newB.length > 0) {
-        apiCall('POST', '/api/data', { badges }).catch(() => {});
-        if (typeof window !== 'undefined' && sessionStorage.getItem('freshLogin')) {
-          setNewBadges(prev => [...prev, ...newB]);
-          sessionStorage.removeItem('freshLogin');
-        }
+      apiCall('POST', '/api/data', { badges }).catch(() => {});
+      if (newB.length > 0 && typeof window !== 'undefined' && sessionStorage.getItem('freshLogin')) {
+        setNewBadges(prev => [...prev, ...newB]);
+        sessionStorage.removeItem('freshLogin');
       }
     } catch (e) {
       showErrorToast('Failed to load data from server');
@@ -269,6 +267,8 @@ export function AppProvider({
     if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
     try { await apiCall('POST', '/api/scores', score); }
     catch { showErrorToast('Failed to save score'); }
+    try { await apiCall('POST', '/api/data', { badges }); }
+    catch { showErrorToast('Failed to save badges'); }
   }, []);
 
   const deleteScore = useCallback(async (date: string, title?: string) => {
@@ -290,7 +290,7 @@ export function AppProvider({
     const next = { ...withPYQ, badges };
     setDataAndPersist(() => next);
     if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
-    try { await apiCall('POST', '/api/data', { pyqData }); }
+    try { await apiCall('POST', '/api/data', { pyqData, badges }); }
     catch { showErrorToast('Failed to save'); }
   }, []);
 
@@ -415,6 +415,8 @@ export function AppProvider({
     if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
     try { await apiCall('POST', '/api/sessions', session); }
     catch { showErrorToast('Failed to save study session'); }
+    try { await apiCall('POST', '/api/data', { badges }); }
+    catch { showErrorToast('Failed to save badges'); }
   }, []);
 
   const setWeeklyTarget = useCallback(async (n: number) => {
