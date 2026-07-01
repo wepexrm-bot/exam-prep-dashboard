@@ -168,15 +168,11 @@ export function AppProvider({
       const rawGoals: Goal[] = (d.goals || []).map((g: Goal) => ({ ...g, date: g.date || todayLocal() }));
       const todayK = todayLocal();
       const existingTexts = new Set(rawGoals.filter(g => g.date === todayK).map(g => g.text));
-      const maxId = Math.max(0, ...rawGoals.map(g => g.id));
-      const carryoverGoals: Goal[] = [];
-      let nextId = maxId + 1;
-      rawGoals.forEach(g => {
-        if (g.done || g.date >= todayK || g.endDate || existingTexts.has(g.text)) return;
+      const goals = rawGoals.map(g => {
+        if (g.done || g.date >= todayK || g.endDate || existingTexts.has(g.text)) return g;
         existingTexts.add(g.text);
-        carryoverGoals.push({ ...g, id: nextId++, date: todayK, done: false });
+        return { ...g, date: todayK, done: false };
       });
-      const goals = [...rawGoals, ...carryoverGoals];
       const base = {
         goals,
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
