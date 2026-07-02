@@ -214,7 +214,14 @@ export function AppProvider({
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch { /* ignore */ }
       apiCall('POST', '/api/data', { badge_study_hours, badge_streak }).catch(() => {});
       if (newB.length > 0 && typeof window !== 'undefined' && sessionStorage.getItem('freshLogin')) {
-        setNewBadges(prev => [...prev, ...newB]);
+        const notified: string[] = JSON.parse(localStorage.getItem('notified_badge_ids') || '[]');
+        const unseen = newB.filter(b => !notified.includes(b.badgeId));
+        if (unseen.length > 0) {
+          const all = notified.concat(unseen.map(b => b.badgeId));
+          const dedup = all.filter((id, i) => all.indexOf(id) === i);
+          localStorage.setItem('notified_badge_ids', JSON.stringify(dedup));
+          setNewBadges(prev => [...prev, ...unseen]);
+        }
         sessionStorage.removeItem('freshLogin');
       }
     } catch (e) {
