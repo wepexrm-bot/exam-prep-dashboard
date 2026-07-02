@@ -116,7 +116,7 @@ export interface AppData {
   weeklyTarget: number;
   notificationPrefs?: NotificationPrefs;
   badge_study_hours?: BadgeState[];  // append-only study hour badges
-  badge_streak?: BadgeState | null;  // single current streak badge
+  badge_streak?: BadgeState[];       // LIFO stack of earned streak badges
   badges?: BadgeState[];  // legacy — kept for one-time migration
   lastUpdated?: string;
 }

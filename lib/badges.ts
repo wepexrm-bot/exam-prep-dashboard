@@ -77,7 +77,7 @@ export function nextStreakBadge(currentBadgeId: string | undefined): BadgeDefini
 
 export function allBadges(data: AppData): BadgeState[] {
   const study = data.badge_study_hours || [];
-  const streak = data.badge_streak ? [data.badge_streak] : [];
+  const streak = data.badge_streak || [];
   return [...study, ...streak];
 }
 
@@ -90,22 +90,25 @@ export function detectNewStudyBadges(hours: number, existingStudyBadges: BadgeSt
     .map(def => ({ badgeId: def.id, earnedAt: new Date().toISOString() }));
 }
 
-export function detectStreakBadge(streak: number, currentStreakBadge: BadgeState | null): {
-  badge: BadgeState | null;
+export function detectStreakBadge(streak: number, currentStack: BadgeState[]): {
+  badges: BadgeState[];
   changed: boolean;
 } {
-  // Demotion on streak break
+  const top = currentStack.length > 0 ? currentStack[currentStack.length - 1] : null;
+  const topId = top?.badgeId || null;
+
+  // Demotion on streak break (pop top, update previous badge date)
   if (streak === 0) {
-    if (!currentStreakBadge) return { badge: null, changed: false };
-    if (currentStreakBadge.badgeId === 'cosmic_catalyst') return { badge: currentStreakBadge, changed: false };
-    const demotedId = demoteStreakBadge(currentStreakBadge.badgeId);
-    return {
-      badge: demotedId ? { badgeId: demotedId, earnedAt: new Date().toISOString() } : null,
-      changed: true,
-    };
+    if (currentStack.length === 0) return { badges: currentStack, changed: false };
+    if (top?.badgeId === 'cosmic_catalyst') return { badges: currentStack, changed: false };
+    const newStack = currentStack.slice(0, -1);
+    if (newStack.length > 0) {
+      newStack[newStack.length - 1] = { ...newStack[newStack.length - 1], earnedAt: new Date().toISOString() };
+    }
+    return { badges: newStack, changed: true };
   }
 
-  // Promotion check
+  // Find highest threshold met
   let bestDef: BadgeDefinition | undefined;
   for (const def of STREAK_BADGES) {
     if (streak >= def.threshold) bestDef = def;
@@ -113,13 +116,15 @@ export function detectStreakBadge(streak: number, currentStreakBadge: BadgeState
   }
 
   const targetId = bestDef?.id || null;
-  const currentId = currentStreakBadge?.badgeId || null;
 
-  if (targetId === currentId) {
-    return { badge: currentStreakBadge, changed: false };
+  if (targetId === topId) return { badges: currentStack, changed: false };
+
+  if (targetId && targetId !== topId) {
+    return {
+      badges: [...currentStack, { badgeId: targetId, earnedAt: new Date().toISOString() }],
+      changed: true,
+    };
   }
-  return {
-    badge: targetId ? { badgeId: targetId, earnedAt: new Date().toISOString() } : null,
-    changed: true,
-  };
+
+  return { badges: currentStack, changed: false };
 }

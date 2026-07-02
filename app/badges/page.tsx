@@ -45,7 +45,9 @@ export default function BadgesPage() {
     );
   }
 
-  const currentStreakBadgeId = data.badge_streak?.badgeId;
+  const currentStreakBadgeId = data.badge_streak && data.badge_streak.length > 0
+    ? data.badge_streak[data.badge_streak.length - 1].badgeId
+    : undefined;
   const nextBadge = nextStreakBadge(currentStreakBadgeId);
   const currentStudyBadgeId = [...STUDY_BADGES].reverse().find(b => earnedIds.has(b.id))?.id;
 

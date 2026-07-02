@@ -118,7 +118,7 @@ export function AppProvider({
       customAlerts: [],
     },
     badge_study_hours: [],
-    badge_streak: null,
+    badge_streak: [],
   };
 
   const CACHE_KEY = 'gate_data_cache';
@@ -131,26 +131,29 @@ export function AppProvider({
 
   function detectBadges(prev: AppData): {
     badge_study_hours: BadgeState[];
-    badge_streak: BadgeState | null;
+    badge_streak: BadgeState[];
     fresh: BadgeState[];
   } {
     const hours = totalStudyHours(prev);
     const existingStudy = prev.badge_study_hours || [];
-    const existingStreak = prev.badge_streak || null;
+    const existingStreak = prev.badge_streak || [];
 
     const newStudy = detectNewStudyBadges(hours, existingStudy);
     const streakDays = computeStreak(prev);
-    const { badge: newStreak, changed: streakChanged } = detectStreakBadge(streakDays, existingStreak);
+    const { badges: newStack, changed: streakChanged } = detectStreakBadge(streakDays, existingStreak);
 
     const studyBadges = [...existingStudy, ...newStudy];
-    const streakBadge = streakChanged ? newStreak : existingStreak;
+    const streakBadges = streakChanged ? newStack : existingStreak;
 
     const fresh: BadgeState[] = [...newStudy];
-    if (streakChanged && newStreak && (!existingStreak || newStreak.badgeId !== existingStreak.badgeId)) {
-      fresh.push(newStreak);
+
+    const oldTop = existingStreak.length > 0 ? existingStreak[existingStreak.length - 1] : null;
+    const newTop = streakBadges.length > 0 ? streakBadges[streakBadges.length - 1] : null;
+    if (streakChanged && newTop && (!oldTop || newTop.badgeId !== oldTop.badgeId || newTop.earnedAt !== oldTop.earnedAt)) {
+      fresh.push(newTop);
     }
 
-    return { badge_study_hours: studyBadges, badge_streak: streakBadge, fresh };
+    return { badge_study_hours: studyBadges, badge_streak: streakBadges, fresh };
   }
 
   const setDataAndPersist = useCallback((updater: AppData | ((prev: AppData) => AppData)) => {
@@ -186,11 +189,11 @@ export function AppProvider({
         return { ...g, date: todayK, done: false };
       });
       let studyBadges: BadgeState[] = d.badge_study_hours || [];
-      let streakBadge: BadgeState | null = d.badge_streak ?? null;
+      let streakStack: BadgeState[] = d.badge_streak || [];
       if (!d.badge_study_hours && d.badges) {
         studyBadges = d.badges.filter((b: BadgeState) => STUDY_BADGES.some(sb => sb.id === b.badgeId));
-        const foundStreak = d.badges.find((b: BadgeState) => STREAK_BADGES.some(sb => sb.id === b.badgeId));
-        streakBadge = foundStreak || null;
+        const streakBadges = d.badges.filter((b: BadgeState) => STREAK_BADGES.some(sb => sb.id === b.badgeId));
+        streakStack = streakBadges.length > 0 ? [streakBadges[streakBadges.length - 1]] : [];
       }
       const base = {
         goals,
@@ -202,7 +205,7 @@ export function AppProvider({
         weeklyTarget: d.weeklyTarget || 12,
         notificationPrefs: { ...defaultData.notificationPrefs, ...d.notificationPrefs, customAlerts: d.notificationPrefs?.customAlerts || [] },
         badge_study_hours: studyBadges,
-        badge_streak: streakBadge,
+        badge_streak: streakStack,
         lastUpdated: d.lastUpdated,
       };
       const { badge_study_hours, badge_streak, fresh: newB } = detectBadges(base);
