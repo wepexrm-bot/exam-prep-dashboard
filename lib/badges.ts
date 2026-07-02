@@ -73,70 +73,53 @@ export function nextStreakBadge(currentBadgeId: string | undefined): BadgeDefini
   return STREAK_BADGES[idx + 1];
 }
 
-// ── Detection helpers called from AppContext after mutations ──
+// ── Build a merged badge array for display ──
 
-export function eligibleStudyBadges(hours: number, existingBadges: BadgeState[]): BadgeState[] {
-  const newBadges: BadgeState[] = [];
-  const existingIds = new Set(existingBadges.map(b => b.badgeId));
-  for (const def of STUDY_BADGES) {
-    if (hours >= def.threshold && !existingIds.has(def.id)) {
-      newBadges.push({ badgeId: def.id, earnedAt: new Date().toISOString() });
-    }
-  }
-  return newBadges;
+export function allBadges(data: AppData): BadgeState[] {
+  const study = data.badge_study_hours || [];
+  const streak = data.badge_streak ? [data.badge_streak] : [];
+  return [...study, ...streak];
 }
 
-export function computeStreakBadgeState(
-  currentBadges: BadgeState[],
-  actualStreak: number,
-): { streakBadges: BadgeState[]; demoted: boolean; promoted: boolean } {
-  const existingStreakBadge = currentBadges.find(b => STREAK_BADGES.some(sb => sb.id === b.badgeId));
-  const currentId = existingStreakBadge?.badgeId;
-  const hasCosmic = currentBadges.some(b => b.badgeId === 'cosmic_catalyst');
-  const today = todayLocal();
-  let demoted = false;
-  let promoted = false;
+// ── Detection helpers called from AppContext after mutations ──
 
-  // ── Demotion on streak break ──
-  if (actualStreak === 0 && currentId && !hasCosmic) {
-    if (existingStreakBadge?.demotedAt?.startsWith(today)) {
-      return { streakBadges: [existingStreakBadge], demoted: false, promoted: false };
-    }
-    const demotedId = demoteStreakBadge(currentId);
-    if (demotedId) {
-      return {
-        streakBadges: [{ badgeId: demotedId, earnedAt: new Date().toISOString(), demotedAt: new Date().toISOString() }],
-        demoted: true,
-        promoted: false,
-      };
-    }
-    return { streakBadges: [], demoted: true, promoted: false };
+export function detectNewStudyBadges(hours: number, existingStudyBadges: BadgeState[]): BadgeState[] {
+  const existingIds = new Set(existingStudyBadges.map(b => b.badgeId));
+  return STUDY_BADGES
+    .filter(def => hours >= def.threshold && !existingIds.has(def.id))
+    .map(def => ({ badgeId: def.id, earnedAt: new Date().toISOString() }));
+}
+
+export function detectStreakBadge(streak: number, currentStreakBadge: BadgeState | null): {
+  badge: BadgeState | null;
+  changed: boolean;
+} {
+  // Demotion on streak break
+  if (streak === 0) {
+    if (!currentStreakBadge) return { badge: null, changed: false };
+    if (currentStreakBadge.badgeId === 'cosmic_catalyst') return { badge: currentStreakBadge, changed: false };
+    const demotedId = demoteStreakBadge(currentStreakBadge.badgeId);
+    return {
+      badge: demotedId ? { badgeId: demotedId, earnedAt: new Date().toISOString() } : null,
+      changed: true,
+    };
   }
 
-  // ── Promotion check (actualStreak > 0) ──
-  if (actualStreak > 0) {
-    const progress = badgeProgress(currentId, actualStreak);
-    let bestDef: BadgeDefinition | undefined;
-    for (const def of STREAK_BADGES) {
-      if (progress >= def.threshold) bestDef = def;
-      else break;
-    }
-
-    if (bestDef) {
-      if (bestDef.id !== currentId) {
-        return {
-          streakBadges: [{ badgeId: bestDef.id, earnedAt: new Date().toISOString() }],
-          demoted: false,
-          promoted: true,
-        };
-      }
-      return { streakBadges: [existingStreakBadge!], demoted: false, promoted: false };
-    }
+  // Promotion check
+  let bestDef: BadgeDefinition | undefined;
+  for (const def of STREAK_BADGES) {
+    if (streak >= def.threshold) bestDef = def;
+    else break;
   }
 
-  // No change
-  if (existingStreakBadge) {
-    return { streakBadges: [existingStreakBadge], demoted: false, promoted: false };
+  const targetId = bestDef?.id || null;
+  const currentId = currentStreakBadge?.badgeId || null;
+
+  if (targetId === currentId) {
+    return { badge: currentStreakBadge, changed: false };
   }
-  return { streakBadges: [], demoted: false, promoted: false };
+  return {
+    badge: targetId ? { badgeId: targetId, earnedAt: new Date().toISOString() } : null,
+    changed: true,
+  };
 }

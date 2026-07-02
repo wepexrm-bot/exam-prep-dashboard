@@ -1,6 +1,6 @@
 'use client';
 import { useApp } from '@/context/AppContext';
-import { STUDY_BADGES, STREAK_BADGES, badgeById, totalStudyHours, nextStreakBadge } from '@/lib/badges';
+import { STUDY_BADGES, STREAK_BADGES, badgeById, totalStudyHours, nextStreakBadge, allBadges } from '@/lib/badges';
 import { computeStreak } from '@/lib/utils';
 import { Award, Clock, Flame, Star } from 'lucide-react';
 import { GlowingBadge } from '@/components/badges/GlowingBadge';
@@ -9,12 +9,13 @@ export default function BadgesPage() {
   const { data } = useApp();
   const hours = Math.round(totalStudyHours(data) * 10) / 10;
   const streak = computeStreak(data);
-  const earnedIds = new Set((data.badges || []).map(b => b.badgeId));
+  const allB = allBadges(data);
+  const earnedIds = new Set(allB.map(b => b.badgeId));
 
   function BadgeCard({ id, earned }: { id: string; earned: boolean }) {
     const def = badgeById(id);
     if (!def) return null;
-    const badgeState = (data.badges || []).find(b => b.badgeId === id);
+    const badgeState = allB.find(b => b.badgeId === id);
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
@@ -33,9 +34,7 @@ export default function BadgesPage() {
           <div style={{ fontSize: 11, color: earned ? '#CBD5E1' : '#6B7280', marginTop: 2 }}>{def.description}</div>
           {earned && badgeState && (
             <div style={{ fontSize: 10, color: '#22D3EE', marginTop: 4 }}>
-              {def.category === 'daily_streak' && badgeState.demotedAt
-                ? `Demoted on ${new Date(badgeState.demotedAt).toLocaleDateString('en-IN')}`
-                : `Earned ${new Date(badgeState.earnedAt).toLocaleDateString('en-IN')}`}
+              Earned {new Date(badgeState.earnedAt).toLocaleDateString('en-IN')}
             </div>
           )}
         </div>
@@ -46,7 +45,7 @@ export default function BadgesPage() {
     );
   }
 
-  const currentStreakBadgeId = (data.badges || []).find(b => STREAK_BADGES.some(sb => sb.id === b.badgeId))?.badgeId;
+  const currentStreakBadgeId = data.badge_streak?.badgeId;
   const nextBadge = nextStreakBadge(currentStreakBadgeId);
   const currentStudyBadgeId = [...STUDY_BADGES].reverse().find(b => earnedIds.has(b.id))?.id;
 

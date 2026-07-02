@@ -115,6 +115,8 @@ export interface AppData {
   studySessions: StudySession[];
   weeklyTarget: number;
   notificationPrefs?: NotificationPrefs;
-  badges?: BadgeState[];
+  badge_study_hours?: BadgeState[];  // append-only study hour badges
+  badge_streak?: BadgeState | null;  // single current streak badge
+  badges?: BadgeState[];  // legacy — kept for one-time migration
   lastUpdated?: string;
 }

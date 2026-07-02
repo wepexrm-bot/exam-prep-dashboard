@@ -7,6 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { EXAM_CONFIG } from '@/lib/constants';
 import { ExamType } from '@/models/User';
 import { BadgeRow } from '@/components/badges/BadgeRow';
+import { allBadges } from '@/lib/badges';
 
 const I = {
   dashboard: <LayoutDashboard size={16} />,
@@ -168,7 +169,7 @@ export function MobileDrawer({ drawerOpen, onCloseDrawer, onSync, username, exam
             background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)', color: '#22D3EE',
           }}>
             <span>{username}</span>
-            <BadgeRow badges={data.badges || []} size={18} />
+            <BadgeRow badges={allBadges(data)} size={18} />
           </div>
         )}
         <div style={{

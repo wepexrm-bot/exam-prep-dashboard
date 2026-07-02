@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { AppData, Confidence, DailyScore, Goal, PYQChapter, PYQSession, Revision, StudySession, Subject, NotificationPrefs, BadgeState } from '@/lib/types';
 import { useExamConfig } from '@/lib/useExamConfig';
 import { sm2Next, computeStreak } from '@/lib/utils';
-import { totalStudyHours, eligibleStudyBadges, computeStreakBadgeState } from '@/lib/badges';
+import { totalStudyHours, detectNewStudyBadges, detectStreakBadge, STUDY_BADGES, STREAK_BADGES } from '@/lib/badges';
 
 interface AppContextType {
   data: AppData;
@@ -117,7 +117,8 @@ export function AppProvider({
       breakReminder: { enabled: false, intervalMin: 120 },
       customAlerts: [],
     },
-    badges: [],
+    badge_study_hours: [],
+    badge_streak: null,
   };
 
   const CACHE_KEY = 'gate_data_cache';
@@ -128,17 +129,28 @@ export function AppProvider({
   dataRef.current = data;
   const cacheLoadedRef = useRef(false);
 
-  function detectBadges(prev: AppData): { badges: BadgeState[]; fresh: BadgeState[] } {
+  function detectBadges(prev: AppData): {
+    badge_study_hours: BadgeState[];
+    badge_streak: BadgeState | null;
+    fresh: BadgeState[];
+  } {
     const hours = totalStudyHours(prev);
-    const existing = prev.badges || [];
-    const existingIds = new Set(existing.map(b => b.badgeId));
-    const studyNew = eligibleStudyBadges(hours, existing);
-    const streak = computeStreak(prev);
-    const { streakBadges } = computeStreakBadgeState(existing, streak);
-    const otherBadges = existing.filter(b => !studyNew.some(nb => nb.badgeId === b.badgeId) && !streakBadges.some(sb => sb.badgeId === b.badgeId));
-    const finalBadges = [...otherBadges, ...studyNew, ...streakBadges];
-    const fresh = finalBadges.filter(b => !existingIds.has(b.badgeId));
-    return { badges: finalBadges, fresh };
+    const existingStudy = prev.badge_study_hours || [];
+    const existingStreak = prev.badge_streak || null;
+
+    const newStudy = detectNewStudyBadges(hours, existingStudy);
+    const streakDays = computeStreak(prev);
+    const { badge: newStreak, changed: streakChanged } = detectStreakBadge(streakDays, existingStreak);
+
+    const studyBadges = [...existingStudy, ...newStudy];
+    const streakBadge = streakChanged ? newStreak : existingStreak;
+
+    const fresh: BadgeState[] = [...newStudy];
+    if (streakChanged && newStreak && (!existingStreak || newStreak.badgeId !== existingStreak.badgeId)) {
+      fresh.push(newStreak);
+    }
+
+    return { badge_study_hours: studyBadges, badge_streak: streakBadge, fresh };
   }
 
   const setDataAndPersist = useCallback((updater: AppData | ((prev: AppData) => AppData)) => {
@@ -173,6 +185,13 @@ export function AppProvider({
         existingTexts.add(g.text);
         return { ...g, date: todayK, done: false };
       });
+      let studyBadges: BadgeState[] = d.badge_study_hours || [];
+      let streakBadge: BadgeState | null = d.badge_streak ?? null;
+      if (!d.badge_study_hours && d.badges) {
+        studyBadges = d.badges.filter((b: BadgeState) => STUDY_BADGES.some(sb => sb.id === b.badgeId));
+        const foundStreak = d.badges.find((b: BadgeState) => STREAK_BADGES.some(sb => sb.id === b.badgeId));
+        streakBadge = foundStreak || null;
+      }
       const base = {
         goals,
         subjects: d.subjects?.length ? d.subjects : defaultSubjects,
@@ -182,14 +201,15 @@ export function AppProvider({
         studySessions: d.studySessions || [],
         weeklyTarget: d.weeklyTarget || 12,
         notificationPrefs: { ...defaultData.notificationPrefs, ...d.notificationPrefs, customAlerts: d.notificationPrefs?.customAlerts || [] },
-        badges: d.badges || [],
+        badge_study_hours: studyBadges,
+        badge_streak: streakBadge,
         lastUpdated: d.lastUpdated,
       };
-      const { badges, fresh: newB } = detectBadges(base);
-      const fresh = { ...base, badges };
+      const { badge_study_hours, badge_streak, fresh: newB } = detectBadges(base);
+      const fresh = { ...base, badge_study_hours, badge_streak };
       setData(fresh);
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(fresh)); } catch { /* ignore */ }
-      apiCall('POST', '/api/data', { badges }).catch(() => {});
+      apiCall('POST', '/api/data', { badge_study_hours, badge_streak }).catch(() => {});
       if (newB.length > 0 && typeof window !== 'undefined' && sessionStorage.getItem('freshLogin')) {
         setNewBadges(prev => [...prev, ...newB]);
         sessionStorage.removeItem('freshLogin');
@@ -261,13 +281,13 @@ export function AppProvider({
       ? cd.dailyScores.map((s, i) => i === idx ? score : s)
       : [...cd.dailyScores, score];
     const withScores = { ...cd, dailyScores: scores };
-    const { badges, fresh } = detectBadges(withScores);
-    const next = { ...withScores, badges };
+    const { badge_study_hours, badge_streak, fresh } = detectBadges(withScores);
+    const next = { ...withScores, badge_study_hours, badge_streak };
     setDataAndPersist(() => next);
     if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
     try { await apiCall('POST', '/api/scores', score); }
     catch { showErrorToast('Failed to save score'); }
-    try { await apiCall('POST', '/api/data', { badges }); }
+    try { await apiCall('POST', '/api/data', { badge_study_hours, badge_streak }); }
     catch { showErrorToast('Failed to save badges'); }
   }, []);
 
@@ -286,11 +306,11 @@ export function AppProvider({
       ? cd.pyqData.map(p => p.key === key ? { ...p, sessions: [...p.sessions, session] } : p)
       : [...cd.pyqData, { key, total, sessions: [session] }];
     const withPYQ = { ...cd, pyqData };
-    const { badges, fresh } = detectBadges(withPYQ);
-    const next = { ...withPYQ, badges };
+    const { badge_study_hours, badge_streak, fresh } = detectBadges(withPYQ);
+    const next = { ...withPYQ, badge_study_hours, badge_streak };
     setDataAndPersist(() => next);
     if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
-    try { await apiCall('POST', '/api/data', { pyqData, badges }); }
+    try { await apiCall('POST', '/api/data', { pyqData, badge_study_hours, badge_streak }); }
     catch { showErrorToast('Failed to save'); }
   }, []);
 
@@ -409,13 +429,13 @@ export function AppProvider({
   const addStudySession = useCallback(async (session: StudySession) => {
     const cd = dataRef.current;
     const next = { ...cd, studySessions: [...cd.studySessions, session] };
-    const { badges, fresh } = detectBadges(next);
-    const withBadges = { ...next, badges };
+    const { badge_study_hours, badge_streak, fresh } = detectBadges(next);
+    const withBadges = { ...next, badge_study_hours, badge_streak };
     setDataAndPersist(() => withBadges);
     if (fresh.length > 0) setTimeout(() => setNewBadges(n => [...n, ...fresh]), 500);
     try { await apiCall('POST', '/api/sessions', session); }
     catch { showErrorToast('Failed to save study session'); }
-    try { await apiCall('POST', '/api/data', { badges }); }
+    try { await apiCall('POST', '/api/data', { badge_study_hours, badge_streak }); }
     catch { showErrorToast('Failed to save badges'); }
   }, []);
 

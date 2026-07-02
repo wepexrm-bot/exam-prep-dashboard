@@ -7,6 +7,7 @@ import { computeStreak } from '@/lib/utils';
 import { EXAM_CONFIG } from '@/lib/constants';
 import { ExamType } from '@/models/User';
 import { BadgeRow } from '@/components/badges/BadgeRow';
+import { allBadges } from '@/lib/badges';
 
 const I = {
   dashboard: <LayoutDashboard size={16} />,
@@ -85,7 +86,7 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
             fontSize: 11, padding: '4px 10px', borderRadius: 99, fontWeight: 600,
             background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)', color: '#22D3EE',
           }}>{username}</span>
-          <BadgeRow badges={data.badges || []} size={20} />
+          <BadgeRow badges={allBadges(data)} size={20} />
         </div>
       )}
 
