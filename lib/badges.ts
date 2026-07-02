@@ -112,11 +112,24 @@ export function detectStreakBadge(streak: number, currentStack: BadgeState[]): {
 
   if (targetId === topId) return { badges: currentStack, changed: false };
 
-  if (targetId && targetId !== topId) {
-    return {
-      badges: [...currentStack, { badgeId: targetId, earnedAt: new Date().toISOString() }],
-      changed: true,
-    };
+  // Promotion: push only if target is a higher tier than current top
+  if (targetId) {
+    if (!topId) {
+      // First badge earned
+      return {
+        badges: [...currentStack, { badgeId: targetId, earnedAt: new Date().toISOString() }],
+        changed: true,
+      };
+    }
+    const topIdx = STREAK_BADGES.findIndex(b => b.id === topId);
+    const targetIdx = STREAK_BADGES.findIndex(b => b.id === targetId);
+    if (targetIdx > topIdx) {
+      // Higher tier: push
+      return {
+        badges: [...currentStack, { badgeId: targetId, earnedAt: new Date().toISOString() }],
+        changed: true,
+      };
+    }
   }
 
   return { badges: currentStack, changed: false };
