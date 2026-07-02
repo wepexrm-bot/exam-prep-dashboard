@@ -66,13 +66,6 @@ function badgeProgress(currentBadgeId: string | undefined, actualStreak: number)
   return def.threshold + actualStreak;
 }
 
-export function nextStreakBadge(currentBadgeId: string | undefined): BadgeDefinition | undefined {
-  if (!currentBadgeId) return STREAK_BADGES[0];
-  const idx = STREAK_BADGES.findIndex(b => b.id === currentBadgeId);
-  if (idx < 0 || idx >= STREAK_BADGES.length - 1) return undefined;
-  return STREAK_BADGES[idx + 1];
-}
-
 // ── Build a merged badge array for display ──
 
 export function allBadges(data: AppData): BadgeState[] {

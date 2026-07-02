@@ -1,6 +1,6 @@
 'use client';
 import { useApp } from '@/context/AppContext';
-import { STUDY_BADGES, STREAK_BADGES, badgeById, totalStudyHours, nextStreakBadge, allBadges } from '@/lib/badges';
+import { STUDY_BADGES, STREAK_BADGES, badgeById, totalStudyHours, allBadges } from '@/lib/badges';
 import { computeStreak } from '@/lib/utils';
 import { Award, Clock, Flame, Star } from 'lucide-react';
 import { GlowingBadge } from '@/components/badges/GlowingBadge';
@@ -48,7 +48,6 @@ export default function BadgesPage() {
   const currentStreakBadgeId = data.badge_streak && data.badge_streak.length > 0
     ? data.badge_streak[data.badge_streak.length - 1].badgeId
     : undefined;
-  const nextBadge = nextStreakBadge(currentStreakBadgeId);
   const currentStudyBadgeId = [...STUDY_BADGES].reverse().find(b => earnedIds.has(b.id))?.id;
 
   return (
