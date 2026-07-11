@@ -137,6 +137,9 @@ export function Sidebar({ onSync, username, examType: examTypeProp }: { onSync?:
         </div>
         <button onClick={onSync} style={navBtnStyle}>{I.sync} Sync data</button>
         <button onClick={handleLogout} style={{ ...navBtnStyle, color: '#F87171' }}>{I.logout} Sign out</button>
+        <p style={{ fontSize: 9, color: '#5B5F68', textAlign: 'center', margin: '4px 0 0' }}>
+          &copy; {new Date().getFullYear()} wepex. All rights reserved.
+        </p>
       </div>
     </aside>
   );

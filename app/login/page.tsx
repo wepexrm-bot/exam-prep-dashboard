@@ -122,6 +122,9 @@ export default function LoginPage() {
         Don't have an account?{' '}
         <a href="/signup" style={{ color: '#22D3EE', textDecoration: 'none' }}>Sign up</a>
       </p>
+      <p style={{ fontSize: 9, color: '#5B5F68', marginTop: 24 }}>
+        &copy; {new Date().getFullYear()} wepex. All rights reserved.
+      </p>
     </div>
   );
 }

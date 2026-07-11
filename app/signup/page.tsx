@@ -271,6 +271,9 @@ export default function SignupPage() {
         Already have an account?{' '}
         <a href="/login" style={{ color: '#22D3EE', textDecoration: 'none' }}>Log in</a>
       </p>
+      <p style={{ fontSize: 9, color: '#5B5F68', marginTop: 24 }}>
+        &copy; {new Date().getFullYear()} wepex. All rights reserved.
+      </p>
       </div>
     </>
   );
