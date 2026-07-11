@@ -39,7 +39,7 @@ const I = {
 };
 
 export default function GoalsCalendarPage() {
-  const { data, addGoal, toggleGoal, deleteGoal, examType } = useApp();
+  const { data, addGoal, toggleGoal, deleteGoal, updateGoal, examType } = useApp();
   const goals: Goal[] = data.goals || [];
   const { config: cfg } = useExamConfig(examType);
   const goalTags = cfg.goalTags;
@@ -58,6 +58,9 @@ export default function GoalsCalendarPage() {
   const [goalTag, setGoalTag] = useState(goalTags[0]);
   const [isRanged, setIsRanged] = useState(false);
   const [endDate, setEndDate] = useState('');
+
+  const [extendingGoal, setExtendingGoal] = useState<Goal | null>(null);
+  const [newEndDate, setNewEndDate] = useState('');
 
   const { year, month } = viewMonth;
   const firstDay = new Date(year, month, 1);
@@ -144,6 +147,19 @@ export default function GoalsCalendarPage() {
     });
     showToast('Goal added!');
     setShowModal(false);
+  }
+
+  function openExtendModal(g: Goal) {
+    setExtendingGoal(g);
+    setNewEndDate(g.endDate || todayK);
+  }
+
+  async function handleExtend() {
+    if (!extendingGoal) return;
+    if (!newEndDate || newEndDate < todayK) return showToast('New deadline must be today or later');
+    await updateGoal(extendingGoal.id, { endDate: newEndDate });
+    showToast('Deadline extended');
+    setExtendingGoal(null);
   }
 
   const monthLabel = new Date(year, month, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
@@ -337,6 +353,7 @@ export default function GoalsCalendarPage() {
               {displayGoals.map((g, idx) => {
                 const tc = TAG_COLORS[g.tag] || TAG_COLORS.Other;
                 const isRange = g.endDate && g.endDate !== g.date;
+                const isOverdue = !!g.endDate && !g.done && g.endDate < todayK;
                 return (
                   <div key={g.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
@@ -363,13 +380,24 @@ export default function GoalsCalendarPage() {
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{g.text}</div>
                       {isRange && (
-                        <div style={{ fontSize: 10, color: '#F87171', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          {I.flag} Due {new Date(g.endDate! + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        <div style={{ fontSize: 10, color: isOverdue ? '#EF4444' : '#F87171', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          {I.flag} {isOverdue ? 'Overdue since' : 'Due'} {new Date(g.endDate! + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </div>
                       )}
                     </div>
 
                     <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 99, flexShrink: 0, background: tc.bg, color: tc.color }}>{g.tag}</span>
+
+                    {isRange && !g.done && (
+                      <button
+                        onClick={() => openExtendModal(g)}
+                        title="Extend deadline"
+                        style={{
+                          background: 'rgba(37,99,235,0.15)', border: '1px solid rgba(37,99,235,0.3)', color: '#3B82F6',
+                          cursor: 'pointer', padding: '4px 8px', borderRadius: 8, flexShrink: 0, fontSize: 10, fontWeight: 700,
+                        }}
+                      >Extend</button>
+                    )}
 
                     <button
                       onClick={() => { if (selectedDate && selectedDate < todayK) return showToast('Cannot modify goals on a past date'); deleteGoal(g.id); }}
@@ -454,6 +482,30 @@ export default function GoalsCalendarPage() {
         <ModalActions>
           <button className="btn" onClick={() => setShowModal(false)}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSave}>Add goal</button>
+        </ModalActions>
+      </Modal>
+
+      {/* EXTEND DEADLINE MODAL */}
+      <Modal
+        open={!!extendingGoal}
+        onClose={() => setExtendingGoal(null)}
+        title={<span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Flag size={16} /> Extend deadline</span>}
+      >
+        {extendingGoal && (
+          <>
+            <div style={{ fontSize: 13, color: '#E5E7EB', marginBottom: 4 }}>{extendingGoal.text}</div>
+            <div style={{ fontSize: 11, color: extendingGoal.endDate! < todayK ? '#F87171' : 'var(--muted)', marginBottom: 14 }}>
+              {extendingGoal.endDate! < todayK ? 'Was due' : 'Currently due'} {new Date(extendingGoal.endDate! + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </div>
+            <FormGroup label="New deadline" hint="Must be today or later">
+              <input className="form-input" type="date" min={todayK}
+                value={newEndDate} onChange={e => setNewEndDate(e.target.value)} />
+            </FormGroup>
+          </>
+        )}
+        <ModalActions>
+          <button className="btn" onClick={() => setExtendingGoal(null)}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleExtend}>Save new deadline</button>
         </ModalActions>
       </Modal>
     </div>

@@ -3,11 +3,12 @@ import { Grid3X3, Clock, FileText, BarChart3, RefreshCw, Calendar, Flame, Plus, 
 import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Empty } from '@/components/ui';
-import { computeStreak, getDateLabel, today, dateKey } from '@/lib/utils';
+import { computeStreak, getDateLabel, today, dateKey, goalAppearsOn } from '@/lib/utils';
 import { ScoreModal } from '@/components/modals/ScoreModal';
 import { EXAM_CONFIG } from '@/lib/constants';
 import { BadgeRow } from '@/components/badges/BadgeRow';
 import { allBadges } from '@/lib/badges';
+import { Goal } from '@/lib/types';
 
 const Icon = {
   all: <Grid3X3 size={14} />,
@@ -43,11 +44,7 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState<'all' | 'study' | 'pyq' | 'revision' | 'goals'>('all');
 
   const todayKey = today();
-  const goals = (data.goals || []).filter((g: any) => {
-    const start = g.date || todayKey;
-    const end = g.endDate || g.date || todayKey;
-    return todayKey >= start && todayKey <= end;
-  });
+  const goals = (data.goals || []).filter((g: Goal) => goalAppearsOn(g, todayKey, todayKey));
   const done = goals.filter((g: any) => g.done).length;
   const streak = computeStreak(data);
   const pyqData = data.pyqData || [];
