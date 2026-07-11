@@ -180,14 +180,13 @@ export function AppProvider({
     }
     try {
       const d = await apiCall('GET', '/api/data');
-      const rawGoals: Goal[] = (d.goals || []).map((g: Goal) => ({ ...g, date: g.date || todayLocal() }));
-      const todayK = todayLocal();
-      const existingTexts = new Set(rawGoals.filter(g => g.date === todayK).map(g => g.text));
-      const goals = rawGoals.map(g => {
-        if (g.done || g.date >= todayK || g.endDate || existingTexts.has(g.text)) return g;
-        existingTexts.add(g.text);
-        return { ...g, date: todayK, done: false };
-      });
+      // NOTE: goals are no longer mutated on load. `date` is immutable (the day the goal
+      // was created/assigned) and is never rewritten. Carryover — showing an incomplete
+      // goal on every day since it was assigned — is a pure display computation that lives
+      // in lib/goalUtils.ts (goalAppearsOn), computed fresh wherever goals are rendered.
+      // Do not reintroduce a dedup-by-text or date-shifting step here; that's what caused
+      // goals to get silently stranded on their original date when two goals shared text.
+      const goals: Goal[] = (d.goals || []).map((g: Goal) => ({ ...g, date: g.date || todayLocal() }));
       let studyBadges: BadgeState[] = d.badge_study_hours || [];
       let streakStack: BadgeState[] = d.badge_streak || [];
       if (!d.badge_study_hours && d.badges) {
@@ -246,49 +245,88 @@ export function AppProvider({
 
   const toggleGoal = useCallback(async (id: number) => {
     const cd = dataRef.current;
-    const newGoals = cd.goals.map(g => g.id === id ? { ...g, done: !g.done } : g);
+    const prevGoals = cd.goals;
+    const today = todayLocal();
+    const newGoals = cd.goals.map(g => g.id === id
+      ? { ...g, done: !g.done, completedDate: !g.done ? today : undefined }
+      : g);
     setDataAndPersist(prev => ({ ...prev, goals: newGoals }));
-    try { await apiCall('POST', '/api/data', { goals: newGoals }); }
-    catch { showErrorToast('Failed to save'); }
+    try {
+      await apiCall('POST', '/api/data', { goals: newGoals });
+    } catch {
+      setDataAndPersist(prev => ({ ...prev, goals: prevGoals }));
+      showErrorToast('Failed to save — change reverted');
+    }
   }, []);
 
   const addGoal = useCallback(async (goal: Omit<Goal, 'id'>) => {
     const cd = dataRef.current;
+    const prevGoals = cd.goals;
     const newId = Math.max(0, ...cd.goals.map(g => g.id)) + 1;
     const newGoals = [...cd.goals, { ...goal, id: newId }];
     setDataAndPersist(prev => ({ ...prev, goals: newGoals }));
-    try { await apiCall('POST', '/api/data', { goals: newGoals }); }
-    catch { showErrorToast('Failed to save'); }
+    try {
+      await apiCall('POST', '/api/data', { goals: newGoals });
+    } catch {
+      setDataAndPersist(prev => ({ ...prev, goals: prevGoals }));
+      showErrorToast('Failed to save — goal removed');
+    }
   }, []);
 
   const updateGoal = useCallback(async (id: number, patch: Partial<Omit<Goal, 'id'>>) => {
     const cd = dataRef.current;
-    const newGoals = cd.goals.map(g => g.id === id ? { ...g, ...patch } : g);
+    const prevGoals = cd.goals;
+    const newGoals = cd.goals.map(g => {
+      if (g.id !== id) return g;
+      const merged = { ...g, ...patch };
+      if (patch.done === false) merged.completedDate = undefined; // don't leave a stale completedDate on a reopened goal
+      return merged;
+    });
     setDataAndPersist(prev => ({ ...prev, goals: newGoals }));
-    try { await apiCall('POST', '/api/data', { goals: newGoals }); }
-    catch { showErrorToast('Failed to save'); }
+    try {
+      await apiCall('POST', '/api/data', { goals: newGoals });
+    } catch {
+      setDataAndPersist(prev => ({ ...prev, goals: prevGoals }));
+      showErrorToast('Failed to save — change reverted');
+    }
   }, []);
 
   const deleteGoal = useCallback(async (id: number) => {
     const cd = dataRef.current;
+    const prevGoals = cd.goals;
     const newGoals = cd.goals.filter(g => g.id !== id);
     setDataAndPersist(prev => ({ ...prev, goals: newGoals }));
-    try { await apiCall('POST', '/api/data', { goals: newGoals }); }
-    catch { showErrorToast('Failed to save'); }
+    try {
+      await apiCall('POST', '/api/data', { goals: newGoals });
+    } catch {
+      setDataAndPersist(prev => ({ ...prev, goals: prevGoals }));
+      showErrorToast('Failed to delete — goal restored');
+    }
   }, []);
 
   const clearDoneGoals = useCallback(async () => {
     const cd = dataRef.current;
+    const prevGoals = cd.goals;
     const newGoals = cd.goals.filter(g => !g.done);
     setDataAndPersist(prev => ({ ...prev, goals: newGoals }));
-    try { await apiCall('POST', '/api/data', { goals: newGoals }); }
-    catch { showErrorToast('Failed to save'); }
+    try {
+      await apiCall('POST', '/api/data', { goals: newGoals });
+    } catch {
+      setDataAndPersist(prev => ({ ...prev, goals: prevGoals }));
+      showErrorToast('Failed to save — goals restored');
+    }
   }, []);
 
   const clearAllGoals = useCallback(async () => {
+    const cd = dataRef.current;
+    const prevGoals = cd.goals;
     setDataAndPersist(prev => ({ ...prev, goals: [] }));
-    try { await apiCall('POST', '/api/data', { goals: [] }); }
-    catch { showErrorToast('Failed to save'); }
+    try {
+      await apiCall('POST', '/api/data', { goals: [] });
+    } catch {
+      setDataAndPersist(prev => ({ ...prev, goals: prevGoals }));
+      showErrorToast('Failed to save — goals restored');
+    }
   }, []);
 
   const addScore = useCallback(async (score: DailyScore) => {

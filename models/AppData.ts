@@ -16,7 +16,7 @@ const SubjectSchema = new Schema(
 );
 
 const GoalSchema = new Schema(
-  { id: Number, text: String, tag: String, done: { type: Boolean, default: false }, date: String, endDate: String },
+  { id: Number, text: String, tag: String, done: { type: Boolean, default: false }, date: String, endDate: String, completedDate: String },
   { _id: false }
 );
 
@@ -46,6 +46,15 @@ const RevisionSchema = new Schema(
 
 const StudySessionSchema = new Schema(
   { start: String, end: String, durationSec: Number },
+  { _id: false }
+);
+
+const BadgeStateSchema = new Schema(
+  {
+    badgeId: String,
+    earnedAt: String,
+    demotedAt: String,
+  },
   { _id: false }
 );
 
@@ -98,6 +107,9 @@ export interface IAppData extends Document {
   studySessions: typeof StudySessionSchema[];
   weeklyTarget: number;
   notificationPrefs?: typeof NotificationPrefsSchema;
+  badge_study_hours?: typeof BadgeStateSchema[];
+  badge_streak?: typeof BadgeStateSchema[];
+  badges?: typeof BadgeStateSchema[]; // legacy, read-only migration fallback
   lastUpdated: Date;
 }
 
@@ -113,6 +125,9 @@ const AppDataSchema = new Schema<IAppData>(
     studySessions: { type: [StudySessionSchema], default: [] },
     weeklyTarget: { type: Number, default: 12 },
     notificationPrefs: { type: NotificationPrefsSchema, default: () => ({}) },
+    badge_study_hours: { type: [BadgeStateSchema], default: [] },
+    badge_streak: { type: [BadgeStateSchema], default: [] },
+    badges: { type: [BadgeStateSchema], default: undefined }, // legacy — no default array so we can tell "never had this field" apart from "empty"
     lastUpdated: { type: Date, default: Date.now },
   },
   { timestamps: true }

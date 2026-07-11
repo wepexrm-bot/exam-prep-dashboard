@@ -1,4 +1,4 @@
-import { AppData, Confidence, DailyScore, Subject } from './types';
+import { AppData, Confidence, DailyScore, Goal, Subject } from './types';
 
 // ── Local-date-safe key builder ──────────────────────────────
 // Never use toISOString().split('T')[0] for "today" — it converts to UTC
@@ -110,3 +110,35 @@ export function sm2Next(
   return { intervalDays: interval, easinessFactor: Math.round(ef * 100) / 100, repetitions: rep };
 }
 
+// ── Goal carryover / visibility ────────────────────────────────
+// This is the ONLY place carryover logic should live. Nothing else — not loadData,
+// not the dashboard, not the calendar — should re-derive this independently.
+//
+// Rules:
+// - `date` is immutable: the day the goal was created/assigned. Never mutated after creation.
+// - `endDate` (if present) is the planned deadline for ranged/multi-day goals.
+// - `completedDate` is stamped once, at the moment the goal is marked done.
+//
+// Behavior:
+// - Done goals appear exactly once, on completedDate (or endDate/date if that's ever missing
+//   for legacy data) — never again, on any other day, past or future.
+// - Incomplete goals appear on every day of their planned window (date -> endDate||date),
+//   AND continue to carry forward on every day after that window until they're completed
+//   or today, whichever is sooner. They never appear before `date`, and never after `today`.
+export function goalAppearsOn(g: Goal, day: string, today: string): boolean {
+  const start = g.date;
+  const end = g.endDate || g.date;
+
+  if (g.done) {
+    return day === (g.completedDate || end);
+  }
+
+  if (day < start) return false;
+  if (day <= end) return true;      // inside its planned window (covers single-day + ranged)
+  return day <= today;              // overdue — carries forward daily until done, capped at today
+}
+
+/** Convenience: filter a full goals array down to what should show on `day`. */
+export function goalsVisibleOn(goals: Goal[], day: string, today: string): Goal[] {
+  return goals.filter(g => goalAppearsOn(g, day, today));
+}

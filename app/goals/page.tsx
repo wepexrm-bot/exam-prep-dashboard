@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Modal, ModalActions, FormGroup, showToast, Empty } from '@/components/ui';
 import { Goal } from '@/lib/types';
+import { goalAppearsOn } from '@/lib/utils';
 import { useExamConfig } from '@/lib/useExamConfig';
 import { ChevronLeft, ChevronRight, Plus, Check, Trash2, Flag, X, Calendar, Lock, Target, ClipboardList } from 'lucide-react';
 
@@ -70,11 +71,7 @@ export default function GoalsCalendarPage() {
   ];
 
   function goalsForDate(dateKey: string): Goal[] {
-    return goals.filter(g => {
-      const start = g.date;
-      const end = g.endDate || g.date;
-      return dateKey >= start && dateKey <= end;
-    });
+    return goals.filter(g => goalAppearsOn(g, dateKey, todayK));
   }
 
   const monthActivity = useMemo(() => {
@@ -83,7 +80,7 @@ export default function GoalsCalendarPage() {
       if (!day) return;
       const dKey = toKey(new Date(year, month, day));
       const dayGoals = goalsForDate(dKey);
-      const hasDeadline = goals.some(g => g.endDate === dKey);
+      const hasDeadline = goals.some(g => !g.done && g.endDate === dKey);
       if (dayGoals.length > 0 || hasDeadline) {
         map[day] = { total: dayGoals.length, done: dayGoals.filter(g => g.done).length, doneFlags: dayGoals.map(g => g.done), hasDeadline };
       }
@@ -116,7 +113,7 @@ export default function GoalsCalendarPage() {
   }, [sheetMounted]);
 
   const selectedGoals = selectedDate ? goalsForDate(selectedDate) : [];
-  const selectedDeadlines = selectedDate ? goals.filter(g => g.endDate === selectedDate && g.date !== selectedDate) : [];
+  const selectedDeadlines = selectedDate ? goals.filter(g => !g.done && g.endDate === selectedDate && g.date !== selectedDate) : [];
   const deadlineIds = new Set(selectedDeadlines.map(g => g.id));
   const displayGoals = selectedGoals.filter(g => !deadlineIds.has(g.id));
   const selectedDoneCount = displayGoals.filter(g => g.done).length;

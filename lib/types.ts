@@ -15,8 +15,9 @@ export interface Goal {
   text: string;
   tag: string;
   done: boolean;
-  date: string;        // YYYY-MM-DD — the day this goal starts/is set for
+  date: string;        // YYYY-MM-DD — the day this goal starts/is set for. IMMUTABLE — never rewritten after creation.
   endDate?: string;    // YYYY-MM-DD — optional deadline for multi-day goals
+  completedDate?: string; // YYYY-MM-DD — stamped once when marked done; cleared if un-done. Drives display in goalAppearsOn.
 }
 
 export interface DailyScore {
