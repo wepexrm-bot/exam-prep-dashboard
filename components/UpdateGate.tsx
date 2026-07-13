@@ -18,8 +18,8 @@ export default function UpdateGate({ children }: { children: React.ReactNode }) 
         } else if (isVersionLower(version, res.latestVersion)) {
           setState({ blocked: false, soft: true, apkUrl: res.apkUrl, notes: res.releaseNotes });
         }
-      } catch {
-        // fail open — don't block the app if the version check itself fails
+      } catch (e) {
+        console.error('UpdateGate version check failed:', e);
       }
     })();
   }, []);
