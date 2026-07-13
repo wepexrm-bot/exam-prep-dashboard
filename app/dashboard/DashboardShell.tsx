@@ -6,6 +6,7 @@ import { MobileTopBar, MobileBottomNav, MobileDrawer } from '@/components/layout
 import { ToastContainer, showToast } from '@/components/ui';
 import { NotificationManager } from '@/components/NotificationManager';
 import { BadgeNotification } from '@/components/badges/BadgeNotification';
+import UpdateGate from '@/components/UpdateGate';
 import { ExamType } from '@/models/User';
 
 function Shell({ username, examType, children }: { username: string; examType: ExamType; children: React.ReactNode }) {
@@ -62,7 +63,9 @@ export default function DashboardShell({
 }) {
   return (
     <AppProvider examType={examType} username={username}>
-      <Shell username={username} examType={examType}>{children}</Shell>
+      <UpdateGate>
+        <Shell username={username} examType={examType}>{children}</Shell>
+      </UpdateGate>
     </AppProvider>
   );
 }

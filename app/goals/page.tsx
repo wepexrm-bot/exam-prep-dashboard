@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Modal, ModalActions, FormGroup, showToast, Empty } from '@/components/ui';
 import { Goal } from '@/lib/types';
-import { goalAppearsOn } from '@/lib/utils';
+import { goalAppearsOn, isGoalDoneOnDate } from '@/lib/utils';
 import { useExamConfig } from '@/lib/useExamConfig';
 import { ChevronLeft, ChevronRight, Plus, Check, Trash2, Flag, X, Calendar, Lock, Target, ClipboardList } from 'lucide-react';
 
@@ -85,7 +85,8 @@ export default function GoalsCalendarPage() {
       const dayGoals = goalsForDate(dKey);
       const hasDeadline = goals.some(g => !g.done && g.endDate === dKey);
       if (dayGoals.length > 0 || hasDeadline) {
-        map[day] = { total: dayGoals.length, done: dayGoals.filter(g => g.done).length, doneFlags: dayGoals.map(g => g.done), hasDeadline };
+        const doneFlags = dayGoals.map(g => isGoalDoneOnDate(g, dKey));
+        map[day] = { total: dayGoals.length, done: doneFlags.filter(Boolean).length, doneFlags, hasDeadline };
       }
     });
     return map;
@@ -119,7 +120,7 @@ export default function GoalsCalendarPage() {
   const selectedDeadlines = selectedDate ? goals.filter(g => !g.done && g.endDate === selectedDate && g.date !== selectedDate) : [];
   const deadlineIds = new Set(selectedDeadlines.map(g => g.id));
   const displayGoals = selectedGoals.filter(g => !deadlineIds.has(g.id));
-  const selectedDoneCount = displayGoals.filter(g => g.done).length;
+  const selectedDoneCount = selectedDate ? displayGoals.filter(g => isGoalDoneOnDate(g, selectedDate)).length : 0;
 
   function prevMonth() {
     setViewMonth(({ year, month }) => month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 });
@@ -354,11 +355,15 @@ export default function GoalsCalendarPage() {
                 const tc = TAG_COLORS[g.tag] || TAG_COLORS.Other;
                 const isRange = g.endDate && g.endDate !== g.date;
                 const isOverdue = !!g.endDate && !g.done && g.endDate < todayK;
+                // effectiveDone reflects whether THIS DAY should render as checked off —
+                // not whether the goal is done overall. A goal completed on day N still
+                // shows as incomplete on the earlier days it carried over through.
+                const effectiveDone = selectedDate ? isGoalDoneOnDate(g, selectedDate) : g.done;
                 return (
                   <div key={g.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
                     background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
-                    opacity: g.done ? 0.55 : 1,
+                    opacity: effectiveDone ? 0.55 : 1,
                     animation: `goalRowIn 0.2s ease both`,
                   }}>
                     <button
@@ -366,22 +371,27 @@ export default function GoalsCalendarPage() {
                       style={{
                         width: 20, height: 20, borderRadius: 6, flexShrink: 0, cursor: selectedDate && selectedDate !== todayK ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: g.done ? '#4ADE80' : 'transparent',
-                        border: g.done ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
-                        boxShadow: g.done ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
+                        background: effectiveDone ? '#4ADE80' : 'transparent',
+                        border: effectiveDone ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
+                        boxShadow: effectiveDone ? '0 0 8px rgba(74,222,128,0.5)' : 'none',
                         transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
                         opacity: selectedDate && selectedDate !== todayK ? 0.4 : 1,
                       }}
-                    >{g.done && I.check}</button>
+                    >{effectiveDone && I.check}</button>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        fontSize: 13, color: '#E5E7EB', textDecoration: g.done ? 'line-through' : 'none',
+                        fontSize: 13, color: '#E5E7EB', textDecoration: effectiveDone ? 'line-through' : 'none',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{g.text}</div>
                       {isRange && (
                         <div style={{ fontSize: 10, color: isOverdue ? '#EF4444' : '#F87171', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}>
                           {I.flag} {isOverdue ? 'Overdue since' : 'Due'} {new Date(g.endDate! + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </div>
+                      )}
+                      {g.done && selectedDate && selectedDate !== (g.completedDate || g.endDate || g.date) && (
+                        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
+                          Carried over — completed {new Date((g.completedDate || g.endDate || g.date) + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                         </div>
                       )}
                     </div>

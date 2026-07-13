@@ -119,23 +119,39 @@ export function sm2Next(
 // - `endDate` (if present) is the planned deadline for ranged/multi-day goals.
 // - `completedDate` is stamped once, at the moment the goal is marked done.
 //
-// Behavior:
-// - Done goals appear exactly once, on completedDate (or endDate/date if that's ever missing
-//   for legacy data) — never again, on any other day, past or future.
-// - Incomplete goals appear on every day of their planned window (date -> endDate||date),
-//   AND continue to carry forward on every day after that window until they're completed
-//   or today, whichever is sooner. They never appear before `date`, and never after `today`.
+// IMPORTANT DISTINCTION: `goalAppearsOn` answers "does this goal show up on this day
+// at all" — it does NOT tell you whether to render it as checked/complete on that day.
+// A goal that was carried over for several days before being completed should still
+// show up on every one of those earlier days (as a historical record that it wasn't
+// finished on time) — completing it must not erase that history. Use isGoalDoneOnDate
+// alongside this to decide checkbox/strikethrough state per day.
 export function goalAppearsOn(g: Goal, day: string, today: string): boolean {
   const start = g.date;
   const end = g.endDate || g.date;
 
+  if (day < start) return false;
+
   if (g.done) {
-    return day === (g.completedDate || end);
+    // Visible on every day from creation through the day it was actually completed.
+    // Earlier days render as incomplete (see isGoalDoneOnDate) — the record of the
+    // carryover is preserved rather than wiped out by completing it later.
+    const finish = g.completedDate || end;
+    return day <= finish;
   }
 
-  if (day < start) return false;
   if (day <= end) return true;      // inside its planned window (covers single-day + ranged)
   return day <= today;              // overdue — carries forward daily until done, capped at today
+}
+
+/**
+ * Whether `goal` should render as checked/complete specifically on `day`.
+ * A goal only "is done" visually on the exact day it was completed — every earlier
+ * day it appeared on (via carryover) stays visually incomplete, so the user can see
+ * exactly which day they slipped and which day they actually finished it.
+ */
+export function isGoalDoneOnDate(g: Goal, day: string): boolean {
+  if (!g.done) return false;
+  return day === (g.completedDate || g.endDate || g.date);
 }
 
 /** Convenience: filter a full goals array down to what should show on `day`. */
