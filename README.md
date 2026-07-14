@@ -1,4 +1,4 @@
-# GATE Prep Dashboard
+# Exam Preparation Dashboard
 
 A full-stack multi-user exam preparation dashboard for GATE, NET, GOVT exams, built with Next.js 14 + MongoDB. Features SM-2 spaced repetition, cross-sectional Insights, PYQ tracking, study timer, score log, goal calendar with carryover, badge system, dark-only glassmorphism UI, and an in-app forced-update mechanism for the Capacitor Android wrapper.
 
