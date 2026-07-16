@@ -5,6 +5,6 @@ export async function GET() {
     latestVersion: '3.2.1',
     minRequiredVersion: '3.2.1',
     apkUrl: 'https://github.com/wepexrm-bot/exam-prep-dashboard/releases/latest',
-    releaseNotes: 'Fixed goal carryover bugs, added deadline extension.',
+    releaseNotes: 'Security bug fixed',
   });
 }
