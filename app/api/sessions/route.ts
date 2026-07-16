@@ -2,18 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { AppData } from '@/models/AppData';
 import { requireAuth } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rateLimit';
+import { csrfGuard } from '@/lib/csrf';
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireAuth(req);
+    const guard = csrfGuard(req);
+    if (guard) return guard;
+
+    const auth = await requireAuth(req);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`sessions:${auth.userId}`, 60, 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+    }
 
     await connectDB();
     const session = await req.json();
 
-    await AppData.updateOne(
+    await AppData.findOneAndUpdate(
       { userId: auth.userId },
-      { $push: { studySessions: session }, $set: { lastUpdated: new Date() } }
+      { $push: { studySessions: session }, $set: { lastUpdated: new Date() } },
+      { upsert: true }
     );
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -22,10 +33,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET all sessions
 export async function GET(req: NextRequest) {
   try {
-    const auth = requireAuth(req);
+    const auth = await requireAuth(req);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     await connectDB();

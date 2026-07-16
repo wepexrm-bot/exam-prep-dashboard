@@ -3,9 +3,13 @@ import { getUsersCollection } from '@/lib/db';
 import { generateVerificationCode } from '@/lib/auth';
 import { sendVerificationEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { csrfGuard } from '@/lib/csrf';
 
 export async function POST(req: NextRequest) {
   try {
+    const guard = csrfGuard(req);
+    if (guard) return guard;
+
     const { email } = await req.json();
     if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 });
 

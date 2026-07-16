@@ -214,7 +214,7 @@ export default function InsightsPage() {
       recs.push({
         icon: <Target size={14} />, color: C.red,
         bg: 'rgba(248,113,113,0.08)',
-        text: `Focus on <strong>${weakSubjs.map(s => s.name).join(', ')}</strong> — ${weakSubjs.length === 1 ? 'it\'s' : 'they\'re'} your weakest subject${weakSubjs.length > 1 ? 's' : ''} (less than 50% syllabus done).`,
+        text: `Focus on ${weakSubjs.map(s => s.name).join(', ')} — ${weakSubjs.length === 1 ? 'it\'s' : 'they\'re'} your weakest subject${weakSubjs.length > 1 ? 's' : ''} (less than 50% syllabus done).`,
       });
     }
 

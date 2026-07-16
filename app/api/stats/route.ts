@@ -4,12 +4,11 @@ import { AppData } from '@/models/AppData';
 import { requireAuth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
-  const auth = requireAuth(req);
+  const auth = await requireAuth(req);
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await connectDB();
   let doc = await AppData.findOne({ userId: auth.userId }).lean() as Record<string, unknown> | null;
-  if (!doc) doc = await AppData.findOne({ username: auth.name }).lean() as Record<string, unknown> | null;
   if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const json = JSON.stringify(doc);

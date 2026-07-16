@@ -2,26 +2,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { AppData } from '@/models/AppData';
 import { requireAuth } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rateLimit';
+import { csrfGuard } from '@/lib/csrf';
 
-// POST /api/scores  — upsert a score entry (matched by date + title)
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireAuth(req);
+    const guard = csrfGuard(req);
+    if (guard) return guard;
+
+    const auth = await requireAuth(req);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`scores:${auth.userId}`, 60, 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+    }
 
     await connectDB();
     const entry = await req.json();
 
     const title = entry.title || '';
-    // Atomic: remove existing entry with matching date+title, then push the new one
+    const existingDoc = await AppData.findOne({ userId: auth.userId }, 'dailyScores').lean() as { dailyScores?: any[] } | null;
+    const scores: any[] = existingDoc?.dailyScores || [];
+    const idx = scores.findIndex((s: any) => s.date === entry.date && (s.title || '') === title);
+
+    let newScores: any[];
+    if (idx >= 0) {
+      newScores = [...scores.slice(0, idx), entry, ...scores.slice(idx + 1)];
+    } else {
+      newScores = [...scores, entry];
+    }
+
     await AppData.updateOne(
       { userId: auth.userId },
-      { $pull: { dailyScores: { date: entry.date, title: { $eq: title } } } }
+      { $set: { dailyScores: newScores, lastUpdated: new Date() } }
     );
-    await AppData.updateOne(
-      { userId: auth.userId },
-      { $push: { dailyScores: entry }, $set: { lastUpdated: new Date() } }
-    );
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('Scores POST error:', err);
@@ -29,11 +45,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE /api/scores?date=YYYY-MM-DD[&title=...]
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = requireAuth(req);
+    const guard = csrfGuard(req);
+    if (guard) return guard;
+
+    const auth = await requireAuth(req);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    if (!checkRateLimit(`scores:${auth.userId}`, 60, 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+    }
 
     await connectDB();
     const date = req.nextUrl.searchParams.get('date');

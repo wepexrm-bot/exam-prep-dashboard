@@ -71,8 +71,7 @@ export default function SignupPage() {
         setLoading(false);
         return;
       }
-      sessionStorage.setItem('freshLogin', '1');
-      router.push('/dashboard');
+      router.push(`/verify?email=${encodeURIComponent(email)}`);
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);

@@ -2,9 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUsersCollection } from '@/lib/db';
 import { signToken, TOKEN_NAME } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { csrfGuard } from '@/lib/csrf';
+
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 30 * 24 * 60 * 60,
+  path: '/',
+};
 
 export async function POST(req: NextRequest) {
   try {
+    const guard = csrfGuard(req);
+    if (guard) return guard;
+
     const { email, code } = await req.json();
     if (!email || !code) {
       return NextResponse.json({ error: 'Email and code are required' }, { status: 400 });
@@ -50,16 +62,11 @@ export async function POST(req: NextRequest) {
       email: user.email,
       name: user.name,
       examType: user.examType,
+      tokenVersion: user.tokenVersion ?? 0,
     });
 
     const res = NextResponse.json({ success: true, name: user.name, examType: user.examType });
-    res.cookies.set(TOKEN_NAME, token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60,
-      path: '/',
-    });
+    res.cookies.set(TOKEN_NAME, token, COOKIE_OPTS);
     return res;
   } catch (err) {
     console.error('Verify error:', err);

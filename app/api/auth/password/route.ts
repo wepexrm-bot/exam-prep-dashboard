@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsersCollection } from '@/lib/db';
-import { requireAuth, hashPassword, comparePassword } from '@/lib/auth';
+import { requireAuth, hashPassword, comparePassword, TOKEN_NAME } from '@/lib/auth';
 import { toObjectId } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { csrfGuard } from '@/lib/csrf';
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireAuth(req);
+    const guard = csrfGuard(req);
+    if (guard) return guard;
+
+    const auth = await requireAuth(req);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
@@ -28,9 +32,15 @@ export async function POST(req: NextRequest) {
     if (!valid) return NextResponse.json({ error: 'Current password incorrect' }, { status: 400 });
 
     const newHash = await hashPassword(newPassword);
-    await users.updateOne({ _id: toObjectId(auth.userId) }, { $set: { passwordHash: newHash } });
+    const tv = (user.tokenVersion ?? 0) + 1;
+    await users.updateOne(
+      { _id: toObjectId(auth.userId) },
+      { $set: { passwordHash: newHash, tokenVersion: tv } }
+    );
 
-    return NextResponse.json({ ok: true });
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(TOKEN_NAME, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 0, path: '/' });
+    return res;
   } catch (err) {
     console.error('Password change error:', err);
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });

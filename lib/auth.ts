@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
+import { getUsersCollection, toObjectId } from './db';
 
 const rawSecret = process.env.JWT_SECRET;
 if (!rawSecret) {
@@ -15,9 +16,10 @@ export interface AuthPayload {
   email: string;
   name: string;
   examType: string;
+  tokenVersion?: number;
 }
 
-export function signToken(payload: AuthPayload): string {
+export function signToken(payload: AuthPayload & { tokenVersion?: number }): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
 }
 
@@ -33,13 +35,32 @@ export function verifyToken(token: string): AuthPayload | null {
 // Reads the JWT from the cookie and returns the payload, or null if invalid.
 // Compatible with both old and new JWT shape.
 
-export function requireAuth(req: NextRequest): AuthPayload | null {
+export async function requireAuth(req: NextRequest): Promise<AuthPayload | null> {
   // Try cookie from request headers first
   const cookieHeader = req.headers.get('cookie') || '';
   const match = cookieHeader.match(new RegExp(`${TOKEN_NAME}=([^;]+)`));
   const token = match?.[1];
   if (!token) return null;
-  return verifyToken(token);
+
+  const payload = verifyToken(token);
+  if (!payload) return null;
+
+  // Check tokenVersion if present on the user document
+  if (payload.tokenVersion !== undefined) {
+    try {
+      const users = await getUsersCollection();
+      const user = await users.findOne(
+        { _id: toObjectId(payload.userId) },
+        { projection: { tokenVersion: 1 } }
+      );
+      const storedVersion = (user as any)?.tokenVersion ?? 0;
+      if (payload.tokenVersion < storedVersion) return null;
+    } catch {
+      return null;
+    }
+  }
+
+  return payload;
 }
 
 // Server component version — reads from next/headers (for layouts/pages)

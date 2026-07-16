@@ -64,6 +64,7 @@ export interface UserDoc {
   verificationCode?: string;
   verificationExpires?: Date;
   verifyAttempts?: number;
+  tokenVersion?: number;
   createdAt: Date;
 }
 

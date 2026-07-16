@@ -64,8 +64,8 @@ A full-stack multi-user exam preparation dashboard for GATE, NET, GOVT exams, bu
 
 ### Resilience & Performance
 - **localStorage persistence** — every mutation writes to cache; data survives reloads even during server outages
-- **Optimistic state** — UI updates instantly, syncs async to server; error toast on failure
-- **Atomic score upsert** — `$pull`+`$push` prevents TOCTOU race in score writes
+- **Optimistic state with revert** — UI updates instantly, syncs async to server; on failure reverts state and shows error toast
+- **Atomic score upsert** — replaces full `dailyScores` array in a single `$set` to prevent TOCTOU race in score writes
 - **Rate limited auth** — password change limited to 5 requests per 15 min per user; verification code max 5 failed attempts
 - **No `transition: all`** — all transitions scoped to specific properties to reduce GPU composite pressure
 - **No staggered entry animations** — all items animate simultaneously, eliminating sequential layout thrash
@@ -169,16 +169,15 @@ gate-prep/
 |-------|--------|---------|
 | `/api/app-version` | GET | Returns `latestVersion`, `minRequiredVersion`, `apkUrl`, `releaseNotes` |
 | `/api/auth` | POST | Login (returns JWT in HttpOnly cookie) |
-| `/api/auth` | GET | Returns current user session |
 | `/api/auth` | DELETE | Clears auth cookie (logout) |
 | `/api/auth/signup` | POST | Register with email + password + exam |
 | `/api/auth/verify` | POST | Verify email with code (max 5 attempts) |
 | `/api/auth/password` | POST | Change password (rate limited) |
 | `/api/auth/resend-code` | POST | Resend verification code |
 | `/api/data` | GET | Returns full AppData document (upsert) |
-| `/api/data` | POST | Saves AppData fields |
+| `/api/data` | POST | Saves whitelisted AppData fields (goals, subjects, dailyScores, pyqData, revisions, studySessions, weeklyTarget, notificationPrefs, badge_study_hours, badge_streak) |
 | `/api/sessions` | POST | Creates a new study session |
-| `/api/scores` | POST | Creates/updates a score entry (atomic) |
+| `/api/scores` | POST | Creates/updates a score entry (single atomic update) |
 | `/api/stats` | GET | Aggregated counts + file size |
 | `/api/export` | GET | Downloads full data as JSON |
 | `/api/exam-configs` | GET | Returns all exam configurations |
@@ -189,6 +188,6 @@ gate-prep/
 - All API routes authenticate via `requireAuth()` and query by `userId`
 - Email uniqueness enforced via MongoDB unique index
 - Verification codes stored in user document with expiry and attempt counter
-- SMTP email sending via Nodemailer (Mailtrap in dev, Mailgun/SendGrid in prod)
+- Transactional email sending via Brevo API
 
 The mobile APK loads from the live Render URL via WebView — no local build pipeline needed for feature updates. Only rebuild the APK when native Capacitor plugins change.

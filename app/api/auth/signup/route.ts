@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsersCollection, connectDB } from '@/lib/db';
-import { hashPassword, signToken, TOKEN_NAME } from '@/lib/auth';
+import { hashPassword, signToken, TOKEN_NAME, generateVerificationCode } from '@/lib/auth';
 import { ExamConfig } from '@/models/ExamConfig';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { sendVerificationEmail } from '@/lib/email';
+import { csrfGuard } from '@/lib/csrf';
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export async function POST(req: NextRequest) {
   try {
+    const guard = csrfGuard(req);
+    if (guard) return guard;
+
     const { name, email, password, examType, examYear } = await req.json();
 
     if (!name || !email || !password || !examType || !examYear) {
@@ -38,12 +43,14 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordHash = await hashPassword(password);
+    const code = generateVerificationCode();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
 
     let userId: string;
     if (existing && !existing.verified) {
       await users.updateOne(
         { email: normalizedEmail },
-        { $set: { name, passwordHash, examType, examYear: Number(examYear), verified: true } }
+        { $set: { name, passwordHash, examType, examYear: Number(examYear), verified: false, verificationCode: code, verificationExpires: expires } }
       );
       userId = existing._id!.toString();
     } else {
@@ -53,23 +60,17 @@ export async function POST(req: NextRequest) {
         passwordHash,
         examType,
         examYear: Number(examYear),
-        verified: true,
+        verified: false,
+        verificationCode: code,
+        verificationExpires: expires,
         createdAt: new Date(),
       });
       userId = result.insertedId.toString();
     }
 
-    const token = signToken({ userId, email: normalizedEmail, name, examType });
+    const emailResult = await sendVerificationEmail(normalizedEmail, name, code);
 
-    const res = NextResponse.json({ success: true, name, examType });
-    res.cookies.set(TOKEN_NAME, token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60,
-      path: '/',
-    });
-    return res;
+    return NextResponse.json({ success: true, needsVerification: true, email: normalizedEmail, emailSent: emailResult.success });
   } catch (err) {
     console.error('Signup error:', err);
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
