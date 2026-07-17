@@ -78,6 +78,10 @@ async function apiCall(method: string, url: string, body?: unknown) {
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (r.status === 401 && typeof window !== 'undefined') {
+    window.location.href = '/login';
+    throw new Error('Session expired — redirecting to login');
+  }
   if (!r.ok) {
     const data = await r.json().catch(() => ({}));
     throw new Error(data.error || `API error ${r.status}`);

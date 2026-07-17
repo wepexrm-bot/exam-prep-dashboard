@@ -116,6 +116,10 @@ export default function LoginPage() {
             opacity: loading ? 0.6 : 1,
           }}
         >{loading ? 'Logging in...' : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>Log in <ArrowRight size={16} /></span>}</button>
+
+        <p style={{ fontSize: 12, color: '#64748B', marginTop: 12, textAlign: 'center' }}>
+          <a href="/forgot-password" style={{ color: '#94A3B8', textDecoration: 'none' }}>Forgot password?</a>
+        </p>
       </div>
 
       <p style={{ fontSize: 12, color: '#64748B', marginTop: 20 }}>
