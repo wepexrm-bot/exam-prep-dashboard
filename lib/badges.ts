@@ -1,7 +1,7 @@
 import { BadgeDefinition, BadgeState, AppData } from './types';
 
 export const STUDY_BADGES: BadgeDefinition[] = [
-  { id: 'bronze_spark', category: 'study_hours', name: 'Bronze Spark', description: 'Studied 0-180 total hours', icon: '/badges/bronze_spark.svg', threshold: 0, permanent: false },
+  { id: 'bronze_spark', category: 'study_hours', name: 'Bronze Spark', description: 'Studied 1-180 total hours', icon: '/badges/bronze_spark.svg', threshold: 1, permanent: false },
   { id: 'silver_focus', category: 'study_hours', name: 'Silver Focus', description: 'Studied 181-300 total hours', icon: '/badges/silver_focus.svg', threshold: 181, permanent: false },
   { id: 'gold_mastery', category: 'study_hours', name: 'Gold Mastery', description: 'Studied 301-720 total hours', icon: '/badges/gold_mastery.svg', threshold: 301, permanent: false },
   { id: 'platinum_scholar', category: 'study_hours', name: 'Platinum Scholar', description: 'Studied 721-1500 total hours', icon: '/badges/platinum_scholar.svg', threshold: 721, permanent: false },
