@@ -200,14 +200,6 @@ export function AppProvider({
         const streakBadges = d.badges.filter((b: BadgeState) => STREAK_BADGES.some(sb => sb.id === b.badgeId));
         streakStack = streakBadges.length > 0 ? [streakBadges[streakBadges.length - 1]] : [];
       }
-      // Fallback: if server has no badges but local state does (server save failed silently)
-      const local = dataRef.current;
-      if (studyBadges.length === 0 && local.badge_study_hours?.length) {
-        studyBadges = local.badge_study_hours;
-      }
-      if (streakStack.length === 0 && local.badge_streak?.length) {
-        streakStack = local.badge_streak;
-      }
       const base = {
         goals,
         subjects: d.subjects?.length ? d.subjects : defaultSubjectsRef.current,
