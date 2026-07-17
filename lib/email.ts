@@ -21,11 +21,11 @@ async function sendEmail(to: string, name: string, code: string, type: EmailType
   const heading = isReset ? 'Password reset' : `Hi ${name}`;
   const bodyText = isReset
     ? `You requested to reset your password. Use the code below to set a new password and regain access to your account.`
-    : `Welcome to Preparation! Use the code below to verify your account and start tracking your exam prep.`;
+    : `Welcome to TargetZero! Use the code below to verify your account and start tracking your exam preparation.`;
 
   try {
     await client.transactionalEmails.sendTransacEmail({
-      sender: { name: 'Preparation', email: BREVO_SENDER_EMAIL },
+      sender: { name: 'TargetZero', email: BREVO_SENDER_EMAIL },
       to: [{ email: to, name }],
       subject,
       htmlContent: `
