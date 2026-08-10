@@ -26,6 +26,7 @@ export default function StudyTimerPage() {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const startRef = useRef<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const midnightRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     function saveOnUnload() {
@@ -57,14 +58,37 @@ export default function StudyTimerPage() {
     try {
       const ts = JSON.parse(raw);
       if (!ts.startedAt) return;
-      startRef.current = new Date(ts.startedAt);
+
+      // Overnight recovery: timer started on a previous day — save it to yesterday,
+      // don't auto-resume. User must start a fresh timer manually today.
+      const started = new Date(ts.startedAt);
+      if (dateKey(started) !== today()) {
+        const savedElapsed = ts.paused
+          ? ts.pausedAt || 0
+          : typeof ts.elapsed === 'number'
+            ? ts.elapsed
+            : (ts.pausedAt || 0) + Math.floor((Date.now() - started.getTime()) / 1000);
+        if (savedElapsed > 60) {
+          const session: StudySession = {
+            start: started.toISOString(),
+            end: new Date(started.getTime() + savedElapsed * 1000).toISOString(),
+            durationSec: savedElapsed,
+          };
+          addStudySession(session);
+          showToast('Overnight timer saved to yesterday');
+        }
+        localStorage.removeItem('gate_timer_v2');
+        return;
+      }
+
+      startRef.current = started;
       if (ts.paused) {
         setRunning(true); setPaused(true);
         setPausedAt(ts.pausedAt); setElapsed(ts.pausedAt);
       } else {
         const recovered = typeof ts.elapsed === 'number'
           ? ts.elapsed
-          : ts.pausedAt + Math.floor((Date.now() - new Date(ts.startedAt).getTime()) / 1000);
+          : ts.pausedAt + Math.floor((Date.now() - started.getTime()) / 1000);
         setPausedAt(ts.pausedAt); setElapsed(recovered);
         setRunning(true); setPaused(false);
       }
@@ -78,17 +102,22 @@ export default function StudyTimerPage() {
       const base = pausedAt;
       const startTime = startRef.current!.getTime();
       intervalRef.current = setInterval(() => {
-        const next = base + Math.floor((Date.now() - startTime) / 1000);
+        const now = Date.now();
+        const next = base + Math.floor((now - startTime) / 1000);
         setElapsed(next);
         localStorage.setItem('gate_timer_v2', JSON.stringify({
           startedAt: startRef.current!.toISOString(),
           pausedAt: base, paused: false, running: true, elapsed: next,
         }));
+        // Safety net: auto-save + stop if we hit 23:57 or later
+        const mins = new Date(now).getHours() * 60 + new Date(now).getMinutes();
+        if (mins >= 23 * 60 + 57) autoSaveAndStop('Session saved — timer stopped before midnight');
       }, 1000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, paused, pausedAt]);
 
   function saveState(extra: object) {
@@ -118,24 +147,50 @@ export default function StudyTimerPage() {
     saveState({ paused: true, pausedAt: now });
   }
 
-  async function handleStop() {
-    if (!running) return;
+  async function autoSaveAndStop(message?: string) {
+    if (!startRef.current) return;
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (midnightRef.current) { clearTimeout(midnightRef.current); midnightRef.current = null; }
     const finalElapsed = paused
       ? pausedAt
       : pausedAt + Math.floor((Date.now() - startRef.current!.getTime()) / 1000);
     if (finalElapsed > 60) {
       const session: StudySession = {
-        start: startRef.current!.toISOString(),
+        start: startRef.current.toISOString(),
         end: new Date().toISOString(),
         durationSec: finalElapsed,
       };
       await addStudySession(session);
-      showToast(`Session saved: ${formatSeconds(finalElapsed)}`);
+      showToast(message || `Session saved: ${formatSeconds(finalElapsed)}`);
     }
     localStorage.removeItem('gate_timer_v2');
     setRunning(false); setPaused(false); setElapsed(0); setPausedAt(0);
     startRef.current = null;
+  }
+
+  // Midnight safety net: auto-save + stop at 23:57, covering paused sessions too.
+  // Re-armed whenever the timer is active (started/resumed/paused).
+  useEffect(() => {
+    if (!running) return;
+    if (midnightRef.current) { clearTimeout(midnightRef.current); midnightRef.current = null; }
+    const now = new Date();
+    const cutoff = new Date(now);
+    cutoff.setHours(23, 57, 0, 0);
+    const delay = cutoff.getTime() - now.getTime();
+    if (delay <= 0) {
+      autoSaveAndStop('Session saved — timer stopped before midnight');
+      return;
+    }
+    midnightRef.current = setTimeout(() => {
+      autoSaveAndStop('Session saved — timer stopped before midnight');
+    }, delay);
+    return () => { if (midnightRef.current) { clearTimeout(midnightRef.current); midnightRef.current = null; } };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, paused, pausedAt]);
+
+  async function handleStop() {
+    if (!running) return;
+    await autoSaveAndStop();
   }
 
   const sessions = data.studySessions || [];
