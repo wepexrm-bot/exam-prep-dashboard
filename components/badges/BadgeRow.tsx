@@ -11,8 +11,9 @@ export function BadgeRow({ badges, size = 22, max = 3 }: { badges: BadgeState[];
   const studyEarned = STUDY_BADGES.filter(b => earnedIds.has(b.id));
   const highestStudy = studyEarned.length > 0 ? studyEarned[studyEarned.length - 1] : undefined;
 
-  const streakBadge = badges.find(b => STREAK_BADGES.some(sb => sb.id === b.badgeId));
-  const streakDef = streakBadge ? STREAK_BADGES.find(sb => sb.id === streakBadge.badgeId) : undefined;
+  const streakStates = badges.filter(b => STREAK_BADGES.some(sb => sb.id === b.badgeId));
+  const topStreakState = streakStates[streakStates.length - 1];
+  const streakDef = topStreakState ? STREAK_BADGES.find(sb => sb.id === topStreakState.badgeId) : undefined;
 
   const display = [highestStudy, streakDef].filter(Boolean).slice(0, max);
   if (display.length === 0) return null;
