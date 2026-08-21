@@ -130,13 +130,11 @@ export function NotificationManager() {
 
         const perm = await LocalNotifications.checkPermissions();
         if (perm.display !== 'granted') {
-          await LocalNotifications.requestPermissions();
-        }
-
-        const pending = await LocalNotifications.getPending();
-        const pendingIds = (pending.notifications || []).map(n => ({ id: Number(n.id) }));
-        if (pendingIds.length > 0) {
-          await LocalNotifications.cancel({ notifications: pendingIds });
+          const result = await LocalNotifications.requestPermissions();
+          if (result.display !== 'granted') {
+            console.warn('Notification permissions denied — notifications will not fire in background');
+            return;
+          }
         }
 
         const notifications: Notif[] = [];
@@ -157,6 +155,7 @@ export function NotificationManager() {
               schedule: {
                 on: { hour: clamp(prefs.revisionReminder.hour, 0, 23), minute: clamp(prefs.revisionReminder.minute, 0, 59) },
                 repeats: true,
+                allowWhileIdle: true,
               },
             });
           }
@@ -187,6 +186,7 @@ export function NotificationManager() {
               schedule: {
                 on: { hour: clamp(prefs.goalsCheckIn.hour, 0, 23), minute: clamp(prefs.goalsCheckIn.minute, 0, 59) },
                 repeats: true,
+                allowWhileIdle: true,
               },
             });
           }
@@ -212,6 +212,7 @@ export function NotificationManager() {
               schedule: {
                 on: { hour: clamp(prefs.streakReminder.hour, 0, 23), minute: clamp(prefs.streakReminder.minute, 0, 59) },
                 repeats: true,
+                allowWhileIdle: true,
               },
             });
           }
@@ -241,6 +242,7 @@ export function NotificationManager() {
                 minute: clamp(prefs.weeklyTarget.minute, 0, 59),
               },
               repeats: true,
+              allowWhileIdle: true,
             },
           });
         }
@@ -260,11 +262,12 @@ export function NotificationManager() {
             id: NOTIF_IDS.GOAL_DEADLINE,
             title: 'Goal due today',
             body: `"${firstGoal.text}"${extra} is due today.`,
-            schedule: { at: fireAt.getTime() },
+            schedule: { at: fireAt.getTime(), allowWhileIdle: true },
           });
         }
+      }
 
-        if (prefs.breakReminder.enabled) {
+      if (prefs.breakReminder.enabled) {
           const todaySessions = (data.studySessions || []).filter(s =>
             s.start ? dateKey(new Date(s.start)) === today : false
           );
@@ -283,7 +286,7 @@ export function NotificationManager() {
                 id: NOTIF_IDS.BREAK,
                 title: 'Time for a break?',
                 body: `You've been studying for ${Math.round(totalMin)} min. Step away for a few minutes!`,
-                schedule: { at: fireAt.getTime() },
+                schedule: { at: fireAt.getTime(), allowWhileIdle: true },
               });
             }
           }
@@ -306,6 +309,7 @@ export function NotificationManager() {
                       minute: clamp(alert.minute, 0, 59),
                     },
                     repeats: true,
+                    allowWhileIdle: true,
                   },
                 });
               });
@@ -321,6 +325,7 @@ export function NotificationManager() {
                     minute: clamp(alert.minute, 0, 59),
                   },
                   repeats: true,
+                  allowWhileIdle: true,
                 },
               });
             }
